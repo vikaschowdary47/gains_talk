@@ -34,6 +34,13 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
     }
   };
 
+  const simulate = async (channel: Channel, label: string, newPerson = false) => {
+    const res = await postJSON<{ stored?: boolean; client?: string; error?: string }>("/api/demo/simulate", { channel, newPerson });
+    if (res.error) return showToast(res.error);
+    showToast(newPerson ? "Someone new messaged you. See them on Today." : `Test ${label} message from ${res.client ?? "a client"} is on Today.`);
+    router.refresh();
+  };
+
   const reset = async () => {
     if (!window.confirm("Start over with the demo data? This clears everything you've added.")) return;
     await postJSON("/api/reset", {});
@@ -59,6 +66,9 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
           </span>
           <Icon name="chevron-right" size={16} stroke={2.4} />
         </Link>
+        <button type="button" className="btn btn-pill sm" style={{ alignSelf: "flex-start" }} onClick={() => simulate("whatsapp", "WhatsApp", true)}>
+          Test the privacy check: someone new messages you
+        </button>
 
         <ul className="list cards" style={{ gap: 10 }}>
           {p.rows.map((r) => (
@@ -70,11 +80,16 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                   <span className="pill" style={{ background: BADGE[r.state].bg, color: BADGE[r.state].ink }}>{BADGE[r.state].label}</span>
                 </span>
                 <span style={{ fontSize: 13, lineHeight: "18px", color: "var(--muted)" }}>{r.note}</span>
-                {r.state === "manual" && (
-                  <Link href="/add" className="btn btn-pill sm btn-amber" style={{ alignSelf: "flex-start", marginTop: 6 }}>
-                    <Icon name="share" size={15} stroke={2.2} /> Add a message
-                  </Link>
-                )}
+                <span className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                  {r.state === "manual" && (
+                    <Link href="/add" className="btn btn-pill sm btn-amber">
+                      <Icon name="share" size={15} stroke={2.2} /> Add a message
+                    </Link>
+                  )}
+                  <button type="button" className="btn btn-pill sm" onClick={() => simulate(r.channel, r.name)}>
+                    Send a test message
+                  </button>
+                </span>
               </span>
             </li>
           ))}
@@ -96,6 +111,9 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
             </button>
           </div>
           {!p.emailReady && <p className="small muted" style={{ margin: 0 }}>The inbound email hook isn&apos;t set up yet. See the README for the 5-minute setup.</p>}
+          <button type="button" className="btn btn-pill sm" style={{ alignSelf: "flex-start" }} onClick={() => simulate("email", "Email")}>
+            Send a test email
+          </button>
         </section>
 
         <section className="card" aria-labelledby="style-h" style={{ gap: 8 }}>

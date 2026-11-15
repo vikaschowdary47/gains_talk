@@ -113,3 +113,10 @@ export function seedDB(): DB {
     pending: [],
   };
 }
+
+/** The made-up clients that come with the app. Their numbers and usernames
+ *  aren't real, so replies to them are marked as sent instead of sent. */
+const SAMPLE_IDS = new Set(seedDB().contacts.map((c) => c.id));
+export function isSampleContact(c: { id: string }): boolean {
+  return SAMPLE_IDS.has(c.id);
+}

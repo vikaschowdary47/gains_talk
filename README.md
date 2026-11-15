@@ -59,7 +59,8 @@ friday" becomes "Send Maya's plan, due Friday").
 - **Real now:** AI drafts in 3 angles (with `ANTHROPIC_API_KEY`), privacy gate,
   sending (WhatsApp Cloud API when configured; otherwise the reply is copied and
   the client's chat opens ready to paste), screenshot reading, voice notes,
-  promise detection, wins scan, email intake, WhatsApp and Instagram webhooks.
+  promise detection, wins scan, email intake, WhatsApp, Instagram and Messenger
+  webhooks (receive and send), the intake link, new-people approvals.
 - **Demo:** the sample clients and messages. Without an API key, drafts come from
   built-in examples.
 
@@ -87,13 +88,44 @@ Note: since October 2026, Meta bills replies sent through the API per message
 (with a monthly free allowance). Replies sent from the phone app stay free.
 
 ### Instagram
-Webhook: `https://YOUR-APP/api/webhooks/instagram` with `INSTAGRAM_VERIFY_TOKEN`.
-Needs a professional account and Meta app review. Add the client's Instagram
-username or user id as a handle so messages match.
+1. In your Meta app add the **Instagram** product (API setup with Instagram login) and
+   connect the coach's professional account.
+2. Webhook: `https://YOUR-APP/api/webhooks/instagram`, verify token =
+   `INSTAGRAM_VERIFY_TOKEN` (or `META_VERIFY_TOKEN`). Subscribe to `messages`.
+3. Generate an access token for the account and set `INSTAGRAM_TOKEN`, so replies
+   send from GainsTalk. Without it, Send copies the reply and opens the chat.
+4. Messages match a client by Instagram username or by the numeric id Instagram
+   sends. The first message from someone new waits on Today under
+   "New people messaged you".
 
-### Messenger, TikTok, Trainerize, texts
-Use **Add a message** (paste or screenshot) for now. Trainerize's API needs
-their Studio plan; TikTok business messaging isn't available in every region.
+### Facebook Messenger
+1. Add the **Messenger** product to the same Meta app and connect the coach's Page.
+2. Webhook: `https://YOUR-APP/api/webhooks/messenger`, verify token =
+   `MESSENGER_VERIFY_TOKEN` (or `META_VERIFY_TOKEN`). Subscribe to `messages`.
+3. Generate a Page access token and set `MESSENGER_PAGE_TOKEN` so replies send
+   from GainsTalk.
+
+While the Meta app is in development mode, only people with a role on the app
+(admin, developer, tester) reach the webhooks. That's enough to test with your
+own accounts. Real clients need Meta's app review.
+
+### Trainerize and texts (intake link)
+Set `INTAKE_TOKEN`, then anything that can send a web request can drop messages in:
+`POST https://YOUR-APP/api/intake/webhook?token=INTAKE_TOKEN` with JSON
+`{"channel":"trainerize","from":"maya@example.com","name":"Maya","text":"..."}`
+(or an array of these). Channels: whatsapp, instagram, messenger, email, texts,
+trainerize, tiktok.
+- **Trainerize:** a Zapier or Make zap on "new message" posts to the link.
+- **Texts (iPhone):** a Shortcuts automation on "When I get a message from..." with
+  "Get contents of URL" (POST, JSON body).
+
+### TikTok
+No messaging API for coaches yet. Use **Add a message** (paste or screenshot).
+
+### Demo without any accounts
+On **Channels**, every channel has **Send a test message**: a sample message from
+one of your clients lands on Today. **Test the privacy check** sends one from a
+stranger, which shows up under "New people messaged you" instead of the inbox.
 
 ## Code map
 
@@ -102,7 +134,9 @@ app/                 pages (App Router) and API routes
   api/drafts         3 reply angles (+ check-in drafts for quiet clients)
   api/messages/[id]  send or skip (the only way anything is sent)
   api/intake/*       email webhook, paste/screenshot intake
-  api/webhooks/*     WhatsApp, Instagram
+  api/webhooks/*     WhatsApp, Instagram, Messenger
+  api/intake/webhook intake link for Zapier, Make, iPhone Shortcuts
+  api/demo/simulate  test messages for the Channels screen
   api/voice-notes    saves recordings
 lib/privacy.ts       the privacy gate every incoming message passes through
 lib/ai.ts            Claude prompts: drafts, screenshot reading, wins
@@ -121,7 +155,8 @@ Vercel's servers can't keep files, so the app stores its data in Redis there.
    `KV_REST_API_TOKEN` automatically.
 3. Add your other settings under **Settings → Environment Variables** (the same
    names as `.env.local`: `ANTHROPIC_API_KEY`, `WHATSAPP_TOKEN`,
-   `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_SECRET`, ...).
+   `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_SECRET`,
+   `INTAKE_TOKEN`, ...).
 4. Redeploy. The WhatsApp webhook URL is then
    `https://YOUR-APP.vercel.app/api/webhooks/whatsapp`.
 

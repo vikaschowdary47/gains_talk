@@ -58,12 +58,16 @@ export interface Message {
   text: string;
   at: string;
   status: MessageStatus;
+  /** The platform's own id for this message (webhook retries are ignored). */
+  externalId?: string;
   imageUrl?: string;
   audioUrl?: string;
   drafts?: Drafts;
   /** Check-in drafts for clients who went quiet. */
   nudgeDrafts?: Drafts;
   repliedWith?: string;
+  /** Came from a Channels test button. Replies to it are never really sent. */
+  demo?: boolean;
 }
 
 export interface CoachPromise {

@@ -1,3 +1,4 @@
+import { addHandle } from "@/lib/ingest";
 import { updateDB } from "@/lib/store";
 import { isChannel } from "@/lib/channels";
 import { avatarFor, initialsOf, uid } from "@/lib/util";
@@ -11,6 +12,9 @@ export async function POST(req: Request) {
     apps?: string[];
     clients?: Record<string, boolean>;
     addPending?: string;
+    dismissPending?: string;
+    /** The new account belongs to an existing client: attach the handle to them. */
+    linkPending?: { id: string; clientId: string };
     newClient?: { name: string; channel: string; handle: string };
     style?: Partial<StyleSettings>;
     onboarded?: boolean;
@@ -31,6 +35,27 @@ export async function POST(req: Request) {
         db.contacts.push({
           id: uid("c_"), name: p.name, initials: initialsOf(p.name), avatar: avatarFor(p.name),
           handles: [p.handle], isClient: true, goals: [], since: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+        });
+        db.pending = db.pending.filter((x) => x.id !== p.id);
+      }
+    }
+
+    if (body.linkPending) {
+      const p = db.pending.find((x) => x.id === body.linkPending!.id);
+      const client = db.contacts.find((c) => c.id === body.linkPending!.clientId && c.isClient);
+      if (p && client) {
+        addHandle(client, p.handle.channel, p.handle.value);
+        db.pending = db.pending.filter((x) => x.id !== p.id);
+      }
+    }
+
+    if (body.dismissPending) {
+      // Not a client: remember them so future messages are dropped quietly.
+      const p = db.pending.find((x) => x.id === body.dismissPending);
+      if (p) {
+        db.contacts.push({
+          id: uid("c_"), name: p.name, initials: initialsOf(p.name), avatar: avatarFor(p.name),
+          handles: [p.handle], isClient: false, goals: [],
         });
         db.pending = db.pending.filter((x) => x.id !== p.id);
       }

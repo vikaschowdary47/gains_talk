@@ -53,7 +53,7 @@ export default function ReplyClient(p: Props) {
   const send = async () => {
     if (!text.trim()) return;
     setBusy(true);
-    const res = await postJSON<{ via: "api" | "manual"; openUrl?: string; error?: string; promise?: { text: string } | null }>(
+    const res = await postJSON<{ via: "api" | "manual" | "demo"; openUrl?: string; error?: string; promise?: { text: string } | null }>(
       `/api/messages/${p.messageId}`,
       { action: "send", text }
     );
@@ -61,7 +61,9 @@ export default function ReplyClient(p: Props) {
     if (res.error && !res.via) return showToast(res.error);
     if (res.via === "manual") {
       await copyAndOpen(text, res.openUrl);
-      showToast(res.openUrl ? "Copied. Paste it in the chat that just opened." : "Copied. Paste it in your chat.");
+      showToast(res.error ?? (res.openUrl ? "Copied. Paste it in the chat that just opened." : "Copied. Paste it in your chat."));
+    } else if (res.via === "demo") {
+      showToast("Sample client, so nothing was sent. Marked as replied.");
     }
     setSent(true);
     router.refresh();

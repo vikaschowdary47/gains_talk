@@ -1,23 +1,24 @@
 import { readDB, writeDB } from "@/lib/store";
-import { admit } from "@/lib/privacy";
-import { verifyChallenge, verifyMetaSignature } from "@/lib/meta";
-import { uid } from "@/lib/util";
+import { addHandle, ingest } from "@/lib/ingest";
+import { lookupProfile, verifyChallenge, verifyMetaSignature } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  return verifyChallenge(req, process.env.INSTAGRAM_VERIFY_TOKEN);
+  return verifyChallenge(req, process.env.INSTAGRAM_VERIFY_TOKEN || process.env.META_VERIFY_TOKEN);
 }
 
 interface IgEvent {
-  sender?: { id: string; username?: string };
+  sender?: { id: string };
   timestamp?: number;
-  message?: { text?: string; is_echo?: boolean };
+  message?: { mid?: string; text?: string; is_echo?: boolean; attachments?: { type?: string }[] };
 }
 
 /**
  * Instagram DMs to the coach's professional account.
- * Match clients by their Instagram user id or username (stored as a handle).
+ * Meta sends a numeric sender id. With INSTAGRAM_TOKEN set we look up the
+ * username so messages match clients saved by their @handle; the numeric id
+ * is kept too, because replies through the API need it.
  */
 export async function POST(req: Request) {
   const raw = await req.text();
@@ -25,25 +26,28 @@ export async function POST(req: Request) {
     return new Response("Bad signature", { status: 401 });
   }
   const payload = JSON.parse(raw || "{}") as { entry?: { messaging?: IgEvent[] }[] };
+  const events = (payload.entry ?? []).flatMap((e) => e.messaging ?? []).filter((ev) => ev.sender?.id && ev.message && !ev.message.is_echo);
+  if (events.length === 0) return Response.json({ ok: true, stored: 0 });
+
+  const profiles = new Map<string, { name?: string; username?: string }>();
+  for (const ev of events) {
+    if (!profiles.has(ev.sender!.id)) profiles.set(ev.sender!.id, await lookupProfile("instagram", ev.sender!.id));
+  }
+
   const db = await readDB();
   let stored = 0;
-
-  for (const entry of payload.entry ?? []) {
-    for (const ev of entry.messaging ?? []) {
-      if (!ev.sender?.id || !ev.message || ev.message.is_echo) continue;
-      const handle = ev.sender.username ?? ev.sender.id;
-      const gate = admit(db, "instagram", handle);
-      if (!gate.admitted) continue;
-      db.messages.filter((m) => m.clientId === gate.client.id && m.status === "needs_reply").forEach((m) => (m.status = "info"));
-      db.messages.push({
-        id: uid("ig_"),
-        clientId: gate.client.id,
-        channel: "instagram",
-        direction: "in",
-        text: ev.message.text ?? "[attachment]",
-        at: new Date(ev.timestamp ?? Date.now()).toISOString(),
-        status: "needs_reply",
-      });
+  for (const ev of events) {
+    const id = ev.sender!.id;
+    const prof = profiles.get(id) ?? {};
+    const text = ev.message!.text ?? (ev.message!.attachments?.length ? `[${ev.message!.attachments[0].type ?? "attachment"}]` : "");
+    // Try the username first (how clients are usually saved), then the numeric id.
+    let res = prof.username ? ingest(db, { channel: "instagram", handle: prof.username, name: prof.name, text, at: ev.timestamp, externalId: ev.message!.mid }) : null;
+    if (!res || (!res.stored && res.reason === "unknown_sender")) {
+      if (res && prof.username) db.pending = db.pending.filter((p) => !(p.handle.channel === "instagram" && p.handle.value === prof.username));
+      res = ingest(db, { channel: "instagram", handle: id, name: prof.name ?? prof.username, text, at: ev.timestamp, externalId: ev.message!.mid });
+    }
+    if (res.stored) {
+      addHandle(res.client, "instagram", id);
       stored++;
     }
   }

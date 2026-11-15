@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Angle, Channel, Drafts } from "@/lib/types";
+import { CHANNELS } from "@/lib/channels";
 import { Icon, Rings } from "@/components/Icon";
 import { LogoMark } from "@/components/Logo";
 import { Avatar, ChannelChip, TabBar, Toast, copyAndOpen, postJSON, useToast } from "@/components/ui";
@@ -19,6 +20,7 @@ interface QueueItem {
 interface Quiet { id: string; name: string; initials: string; avatar: string; days: number; lastMessageId: string | null }
 interface PromiseItem { id: string; text: string; due: string | null; clientId: string }
 interface Session { id: string; name: string; when: string; topic: string }
+interface PendingPerson { id: string; name: string; channel: Channel; handle: string; seen: string }
 
 type Tab = "replies" | "quiet" | "promises";
 
@@ -29,6 +31,8 @@ export default function TodayClient(props: {
   quiet: Quiet[];
   promises: PromiseItem[];
   sessions: Session[];
+  pending: PendingPerson[];
+  clients: { id: string; name: string }[];
   defaultAngle: Angle;
 }) {
   const router = useRouter();
@@ -39,6 +43,7 @@ export default function TodayClient(props: {
   const [drafts, setDrafts] = useState<Record<string, Drafts>>({});
   const [busy, setBusy] = useState(false);
   const [promises, setPromises] = useState(props.promises);
+  const [pending, setPending] = useState(props.pending);
   const [toast, showToast] = useToast();
 
   const current = queue.find((q) => q.id === selectedId) ?? queue[0];
@@ -88,7 +93,7 @@ export default function TodayClient(props: {
     if (!current || !d) return;
     setBusy(true);
     const text = d[angle];
-    const res = await postJSON<{ via: "api" | "manual"; openUrl?: string; error?: string; promise?: { text: string } | null }>(
+    const res = await postJSON<{ via: "api" | "manual" | "demo"; openUrl?: string; error?: string; promise?: { text: string } | null }>(
       `/api/messages/${current.id}`,
       { action: "send", text }
     );
@@ -96,7 +101,9 @@ export default function TodayClient(props: {
     if (res.error && !res.via) return showToast(res.error);
     if (res.via === "manual") {
       await copyAndOpen(text, res.openUrl);
-      showToast(res.openUrl ? "Reply copied. Paste it in the chat that just opened." : "Reply copied. Paste it in your chat.");
+      showToast(res.error ?? (res.openUrl ? "Reply copied. Paste it in the chat that just opened." : "Reply copied. Paste it in your chat."));
+    } else if (res.via === "demo") {
+      showToast(`Sample client, so nothing was sent. Marked as replied.`);
     } else {
       showToast(`Sent to ${current.client.name.split(" ")[0]}`);
     }
@@ -109,6 +116,23 @@ export default function TodayClient(props: {
     await postJSON("/api/promises", { id, done: true });
     setPromises((p) => p.filter((x) => x.id !== id));
     showToast("Marked done. Nice follow-through.");
+  };
+
+  const decide = async (p: PendingPerson, add: boolean) => {
+    await postJSON("/api/settings", add ? { addPending: p.id } : { dismissPending: p.id });
+    setPending((list) => list.filter((x) => x.id !== p.id));
+    showToast(add ? `${p.name} is now a client. Their next message lands here.` : `Got it. Messages from ${p.name} stay private.`);
+    router.refresh();
+  };
+
+  /** The account belongs to someone already on the client list. */
+  const link = async (p: PendingPerson, clientId: string) => {
+    const client = props.clients.find((c) => c.id === clientId);
+    if (!client) return;
+    await postJSON("/api/settings", { linkPending: { id: p.id, clientId } });
+    setPending((list) => list.filter((x) => x.id !== p.id));
+    showToast(`Linked to ${client.name}. Their next ${CHANNELS[p.channel].label} message lands here.`);
+    router.refresh();
   };
 
   const tiles: { key: Tab; count: number; label: string; cls: string; icon: "send" | "chat" | "clock" }[] = [
@@ -241,6 +265,41 @@ export default function TodayClient(props: {
 
       <div className="today-grid">
         <div className="stack" style={{ gap: 22 }}>
+          {pending.length > 0 && (
+            <section className="pad" aria-labelledby="new-h">
+              <div className="card stack" style={{ gap: 12 }}>
+                <div className="stack-sm" style={{ gap: 2 }}>
+                  <h2 id="new-h" className="h2" style={{ fontSize: 19 }}>New people messaged you</h2>
+                  <p className="small muted" style={{ margin: 0 }}>Only their name and handle were kept, not the message. Add the ones who are clients, or link them if a client wrote from a new account.</p>
+                </div>
+                <ul className="stack-sm pending-list" style={{ listStyle: "none", margin: 0, padding: 0, gap: 12 }}>
+                  {pending.map((p) => (
+                    <li key={p.id} className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+                      <span className="grow" style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                        <span className="row" style={{ gap: 6 }}><ChannelChip channel={p.channel} /><span className="small muted">{p.seen}</span></span>
+                      </span>
+                      <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" className="btn btn-pill sm" onClick={() => decide(p, false)}>Not a client</button>
+                        {props.clients.length > 0 && (
+                          <select
+                            className="select pending-link"
+                            aria-label={`${p.name} is an existing client`}
+                            value=""
+                            onChange={(e) => e.target.value && link(p, e.target.value)}
+                          >
+                            <option value="">Existing client…</option>
+                            {props.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
+                        )}
+                        <button type="button" className="btn btn-pill sm btn-primary" onClick={() => decide(p, true)}>Add as new client</button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
           {tab === "replies" && (
             <section className="pad stack" aria-labelledby="replies-h">
               <div className="row" style={{ justifyContent: "space-between", padding: "0 4px" }}>

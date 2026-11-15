@@ -48,6 +48,8 @@ export default async function TodayPage() {
     .map((c) => ({ id: c.id, name: c.name, when: c.nextSession!.when, topic: c.nextSession!.topic }))
     .sort((a, b) => soon(a.when) - soon(b.when));
 
+  const pending = db.pending.map((p) => ({ id: p.id, name: p.name, channel: p.handle.channel, handle: p.handle.value, seen: timeLabel(p.firstSeen) }));
+
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
@@ -58,6 +60,8 @@ export default async function TodayPage() {
       quiet={quiet}
       promises={promises}
       sessions={sessions}
+      pending={pending}
+      clients={db.contacts.filter((c) => c.isClient).map((c) => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name))}
       defaultAngle={db.settings.style.defaultAngle}
     />
   );

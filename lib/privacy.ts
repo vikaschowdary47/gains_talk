@@ -8,11 +8,21 @@ function norm(channel: Channel, value: string): string {
   return v;
 }
 
+/** Same handle? Phone numbers also match with or without the country code
+ *  ("(312) 555-0123" and "+1 312 555 0123"). */
+function sameHandle(channel: Channel, a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (channel !== "whatsapp" && channel !== "texts") return false;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return short.length >= 9 && long.length - short.length <= 3 && long.endsWith(short);
+}
+
 /** Find a contact (client or not) by a channel handle. */
 export function findByHandle(db: DB, channel: Channel, value: string): Contact | undefined {
   const target = norm(channel, value);
   if (!target) return undefined;
-  return db.contacts.find((c) => c.handles.some((h) => h.channel === channel && norm(channel, h.value) === target));
+  return db.contacts.find((c) => c.handles.some((h) => h.channel === channel && sameHandle(channel, norm(channel, h.value), target)));
 }
 
 export type AdmitResult =
@@ -33,7 +43,7 @@ export function admit(db: DB, channel: Channel, handle: string, displayName?: st
 
   db.settings.ignoredCount += 1;
   if (!contact) {
-    const exists = db.pending.some((p) => p.handle.channel === channel && norm(channel, p.handle.value) === norm(channel, handle));
+    const exists = db.pending.some((p) => p.handle.channel === channel && sameHandle(channel, norm(channel, p.handle.value), norm(channel, handle)));
     if (!exists) {
       db.pending.push({
         id: uid("pc_"),

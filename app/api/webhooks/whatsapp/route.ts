@@ -1,5 +1,6 @@
 import { readDB, writeDB } from "@/lib/store";
-import { admit, findByHandle } from "@/lib/privacy";
+import { findByHandle } from "@/lib/privacy";
+import { ingest } from "@/lib/ingest";
 import { verifyChallenge, verifyMetaSignature } from "@/lib/meta";
 import { uid } from "@/lib/util";
 
@@ -36,20 +37,16 @@ export async function POST(req: Request) {
       const names = new Map((v.contacts ?? []).map((c) => [c.wa_id, c.profile?.name]));
 
       for (const msg of v.messages ?? []) {
-        const gate = admit(db, "whatsapp", msg.from, names.get(msg.from));
-        if (!gate.admitted) continue; // dropped: never stored
         const text = msg.text?.body ?? msg.image?.caption ?? `[${msg.type} message]`;
-        db.messages.filter((m) => m.clientId === gate.client.id && m.status === "needs_reply").forEach((m) => (m.status = "info"));
-        db.messages.push({
-          id: uid("wa_"),
-          clientId: gate.client.id,
+        const res = ingest(db, {
           channel: "whatsapp",
-          direction: "in",
+          handle: msg.from,
+          name: names.get(msg.from),
           text,
-          at: new Date(Number(msg.timestamp) * 1000).toISOString(),
-          status: "needs_reply",
+          at: Number(msg.timestamp) * 1000,
+          externalId: msg.id,
         });
-        stored++;
+        if (res.stored) stored++; // non-clients are dropped inside ingest, never stored
       }
 
       for (const echo of v.message_echoes ?? []) {

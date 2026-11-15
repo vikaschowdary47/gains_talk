@@ -367,3 +367,7 @@ button { cursor: pointer; }
 @media (hover: hover) and (min-width: 1024px) {
   a.list-item:hover, .session:hover { box-shadow: 0 0 0 2px var(--peri-tint); }
 }
+
+/* "Existing client…" picker on the new-people card: pill-sized, not full width */
+.select.pending-link { width: auto; max-width: 190px; padding: 7px 12px; font-size: 14px; line-height: 20px; border-radius: 999px; }
+.pending-list > li + li { border-top: 1px solid var(--line); padding-top: 12px; }

@@ -1,5 +1,6 @@
 import { readDB, updateDB } from "@/lib/store";
 import { sendReply } from "@/lib/send";
+import { isSampleContact } from "@/lib/seed";
 import { detectPromise } from "@/lib/promises";
 import { enforceStyle } from "@/lib/style";
 import { uid } from "@/lib/util";
@@ -29,7 +30,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   const text = enforceStyle(body.text, db.settings.style, db.settings.coachName);
-  const result = await sendReply(contact, msg.channel, text);
+  // Test messages and sample clients have made-up numbers: mark as replied, send nothing.
+  const result = msg.demo || isSampleContact(contact) ? { via: "demo" as const } : await sendReply(contact, msg.channel, text);
 
   const promise = await updateDB((fresh) => {
     const m = fresh.messages.find((x) => x.id === id);
