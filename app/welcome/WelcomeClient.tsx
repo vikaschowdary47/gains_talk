@@ -96,7 +96,9 @@ export default function WelcomeClient({ initialApps }: { initialApps: Channel[] 
           <button className="btn btn-primary btn-big" disabled={picked.size === 0 || busy} onClick={go}>
             {picked.size === 0 ? "Pick at least one app" : `Continue with ${picked.size} ${picked.size === 1 ? "app" : "apps"}`}
           </button>
-          <p className="small muted center" style={{ margin: 0 }}>Nothing is read until you choose your clients.</p>
+          <p className="small muted center" style={{ margin: 0 }}>
+            Nothing is read until you choose your clients. <a href="/privacy" style={{ color: "inherit" }}>Privacy</a> · <a href="/terms" style={{ color: "inherit" }}>Terms</a>
+          </p>
         </div>
       </div>
     </main>

@@ -377,3 +377,22 @@ button { cursor: pointer; }
 .hook-status.ok { background: var(--mint-tint, #E3F7EE); color: var(--mint-ink, #0F6E4A); }
 .hook-status.bad { background: #FCEBEB; color: #A32D2D; }
 .hook-status.none { background: #F1F1F5; color: var(--muted); }
+
+/* Privacy policy, terms and data deletion */
+.legal { min-height: 100dvh; background: var(--bg); color: var(--ink); padding: calc(20px + var(--safe-top)) 20px calc(32px + var(--safe-bottom)); }
+.legal-head, .legal-body, .legal-foot { max-width: 680px; margin: 0 auto; }
+.legal-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--ink); text-decoration: none; }
+.legal-body { background: #fff; border-radius: 24px; padding: 28px 24px; margin-top: 20px; font-size: 16px; line-height: 1.65; }
+.legal-body h1 { font-family: var(--display); font-size: 34px; line-height: 1.1; letter-spacing: -0.5px; margin: 0; }
+.legal-body h2 { font-family: var(--display); font-size: 21px; margin: 28px 0 6px; letter-spacing: -0.2px; }
+.legal-body p, .legal-body li { color: #33354d; }
+.legal-body ul, .legal-body ol { padding-left: 22px; }
+.legal-body li + li { margin-top: 6px; }
+.legal-body a, .legal-foot a { color: var(--primary); }
+.legal-updated { font-size: 14px; color: var(--muted) !important; margin: 6px 0 18px; }
+.legal-foot { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: 14px; }
+@media (min-width: 700px) { .legal-body { padding: 44px 48px; } }
+.remove-client { color: #A32D2D; background: transparent; border: 1.5px solid #F2C9C9; }
+.remove-confirm { display: flex; flex-direction: column; gap: 10px; background: #FCEBEB; color: #6E1E1E; border-radius: 18px; padding: 14px; }
+.btn-danger { background: #C93838; color: #fff; }
+.legal-mark { width: 38px; height: 38px; border-radius: 11px; background: var(--navy); display: inline-flex; align-items: center; justify-content: center; }

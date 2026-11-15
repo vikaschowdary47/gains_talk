@@ -15,6 +15,8 @@ export async function POST(req: Request) {
     dismissPending?: string;
     /** The new account belongs to an existing client: attach the handle to them. */
     linkPending?: { id: string; clientId: string };
+    /** Remove a client and delete their messages, promises and wins. */
+    deleteClient?: string;
     newClient?: { name: string; channel: string; handle: string };
     style?: Partial<StyleSettings>;
     onboarded?: boolean;
@@ -38,6 +40,14 @@ export async function POST(req: Request) {
         });
         db.pending = db.pending.filter((x) => x.id !== p.id);
       }
+    }
+
+    if (body.deleteClient) {
+      const cid = body.deleteClient;
+      db.contacts = db.contacts.filter((c) => c.id !== cid);
+      db.messages = db.messages.filter((m) => m.clientId !== cid);
+      db.promises = db.promises.filter((p) => p.clientId !== cid);
+      db.wins = db.wins.filter((w) => w.clientId !== cid);
     }
 
     if (body.linkPending) {

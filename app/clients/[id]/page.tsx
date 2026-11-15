@@ -5,6 +5,7 @@ import { timeLabel } from "@/lib/util";
 import { CHANNELS } from "@/lib/channels";
 import { Icon, Rings } from "@/components/Icon";
 import { Avatar, ChannelChip, ChannelIcon, Sidebar } from "@/components/ui";
+import RemoveClient from "./RemoveClient";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +133,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             </li>
           ))}
         </ul>
+      </section>
+      <section className="pad" aria-label="Remove client">
+        <RemoveClient id={c.id} name={c.name} />
       </section>
       </div>
       </div>
