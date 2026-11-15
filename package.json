@@ -1,0 +1,26 @@
+{
+  "name": "gainstalk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GainsTalk: every client message from every app in one place, with replies that stay human.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "reset-demo": "node -e \"require('fs').rmSync('data/db.json',{force:true});console.log('Demo data will be re-seeded on next request.')\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19",
+    "typescript": "^5.9.3"
+  }
+}
