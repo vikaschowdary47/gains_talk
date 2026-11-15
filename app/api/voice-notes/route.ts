@@ -1,6 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-import { readDB, updateDB, UPLOAD_DIR } from "@/lib/store";
+import { readDB, saveUpload, updateDB } from "@/lib/store";
 import { uid } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
@@ -17,18 +15,17 @@ export async function POST(req: Request) {
   if (!messageId || !(audio instanceof Blob)) {
     return Response.json({ error: "messageId and audio are required" }, { status: 400 });
   }
-  const db = readDB();
+  const db = await readDB();
   const msg = db.messages.find((m) => m.id === messageId);
   if (!msg) return Response.json({ error: "Message not found" }, { status: 404 });
   if (audio.size > 12 * 1024 * 1024) return Response.json({ error: "Voice note is too long" }, { status: 413 });
 
   const ext = audio.type.includes("mp4") ? "m4a" : audio.type.includes("ogg") ? "ogg" : "webm";
   const name = `${uid("vn_")}.${ext}`;
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  fs.writeFileSync(path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, name), Buffer.from(await audio.arrayBuffer()));
+  await saveUpload(name, Buffer.from(await audio.arrayBuffer()));
   const url = `/api/files/${name}`;
 
-  updateDB((fresh) => {
+  await updateDB((fresh) => {
     const m = fresh.messages.find((x) => x.id === messageId);
     if (m) {
       m.status = "replied";

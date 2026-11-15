@@ -21,7 +21,7 @@ const BADGE: Record<ChannelRow["state"], { label: string; bg: string; ink: strin
   manual: { label: "Share in", bg: "var(--amber-tint)", ink: "var(--amber-ink)" },
 };
 
-export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: number; ignoredCount: number; forwarding: string; emailReady: boolean; ai: boolean }) {
+export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: number; ignoredCount: number; forwarding: string; emailReady: boolean; ai: boolean; storage: "redis" | "temporary" | "local" }) {
   const router = useRouter();
   const [toast, showToast] = useToast();
 
@@ -101,6 +101,11 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
         <section className="card" aria-labelledby="style-h" style={{ gap: 8 }}>
           <h2 id="style-h" style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Drafts</h2>
           <p className="small muted" style={{ margin: 0 }}>{p.ai ? "AI drafts are on." : "Demo drafts. Add ANTHROPIC_API_KEY to .env.local for real AI drafts."}</p>
+          {p.storage === "temporary" && (
+            <p className="small" style={{ margin: 0, color: "var(--coral-ink)", fontWeight: 600 }}>
+              Data is stored temporarily and can reset. Connect Upstash Redis in Vercel to keep it.
+            </p>
+          )}
           <Link href="/onboarding/voice?from=channels" className="btn btn-white">
             <Icon name="sliders" size={18} /> Your texting style
           </Link>

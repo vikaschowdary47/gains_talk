@@ -4,8 +4,8 @@ import AddClient from "./AddClient";
 
 export const dynamic = "force-dynamic";
 
-export default function AddPage() {
-  const db = readDB();
+export default async function AddPage() {
+  const db = await readDB();
   const clients = db.contacts.filter((c) => c.isClient).map((c) => ({ id: c.id, name: c.name, channel: c.handles[0]?.channel ?? "texts" }));
   return <AddClient clients={clients} ai={aiEnabled()} />;
 }

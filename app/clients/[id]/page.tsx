@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = readDB();
+  const db = await readDB();
   const c = db.contacts.find((x) => x.id === id && x.isClient);
   if (!c) notFound();
 

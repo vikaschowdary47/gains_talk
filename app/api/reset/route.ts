@@ -4,6 +4,6 @@ export const dynamic = "force-dynamic";
 
 /** Start over with the demo data (and onboarding). */
 export async function POST() {
-  resetDB();
+  await resetDB();
   return Response.json({ ok: true });
 }

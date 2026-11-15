@@ -24,5 +24,5 @@ export function verifyChallenge(req: Request, token: string | undefined): Respon
 }
 
 export function graphVersion(): string {
-  return process.env.META_GRAPH_VERSION || "v23.0";
+  return process.env.META_GRAPH_VERSION || "v25.0";
 }

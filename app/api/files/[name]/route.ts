@@ -1,6 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-import { UPLOAD_DIR } from "@/lib/store";
+import { readUpload } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +15,10 @@ const TYPES: Record<string, string> = {
 export async function GET(_req: Request, ctx: { params: Promise<{ name: string }> }) {
   const { name } = await ctx.params;
   if (!/^[\w.-]+$/.test(name)) return new Response("Not found", { status: 404 });
-  const file = path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, name);
-  if (!fs.existsSync(file)) return new Response("Not found", { status: 404 });
+  const data = await readUpload(name);
+  if (!data) return new Response("Not found", { status: 404 });
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  return new Response(fs.readFileSync(file), {
+  return new Response(new Uint8Array(data), {
     headers: { "Content-Type": TYPES[ext] ?? "application/octet-stream", "Cache-Control": "private, max-age=3600" },
   });
 }

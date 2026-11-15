@@ -8,15 +8,15 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { action?: string; id?: string; value?: Permission };
 
   if (body.action === "scan") {
-    const found = await scanWins(readDB());
-    updateDB((db) => {
+    const found = await scanWins(await readDB());
+    await updateDB((db) => {
       db.wins.unshift(...found);
     });
     return Response.json({ ok: true, added: found.length });
   }
 
   if (body.action === "permission" && body.id && ["none", "asked", "yes"].includes(body.value ?? "")) {
-    updateDB((db) => {
+    await updateDB((db) => {
       const w = db.wins.find((x) => x.id === body.id);
       if (w) w.permission = body.value!;
     });
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   }
 
   if (body.action === "remove" && body.id) {
-    updateDB((db) => {
+    await updateDB((db) => {
       db.wins = db.wins.filter((w) => w.id !== body.id);
     });
     return Response.json({ ok: true });

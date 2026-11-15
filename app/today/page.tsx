@@ -6,8 +6,8 @@ import TodayClient from "./TodayClient";
 
 export const dynamic = "force-dynamic";
 
-export default function TodayPage() {
-  const db = readDB();
+export default async function TodayPage() {
+  const db = await readDB();
   if (!db.settings.onboarded) redirect("/welcome");
   const byId = new Map(db.contacts.map((c) => [c.id, c]));
 

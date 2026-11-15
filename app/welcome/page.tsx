@@ -3,7 +3,7 @@ import WelcomeClient from "./WelcomeClient";
 
 export const dynamic = "force-dynamic";
 
-export default function WelcomePage() {
-  const db = readDB();
+export default async function WelcomePage() {
+  const db = await readDB();
   return <WelcomeClient initialApps={db.settings.apps} />;
 }

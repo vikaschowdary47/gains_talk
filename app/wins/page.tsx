@@ -4,8 +4,8 @@ import WinsClient from "./WinsClient";
 
 export const dynamic = "force-dynamic";
 
-export default function WinsPage() {
-  const db = readDB();
+export default async function WinsPage() {
+  const db = await readDB();
   const byId = new Map(db.contacts.map((c) => [c.id, c]));
   const wins = db.wins.map((w) => {
     const c = w.clientId ? byId.get(w.clientId) : undefined;

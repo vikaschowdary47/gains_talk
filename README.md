@@ -108,14 +108,31 @@ lib/privacy.ts       the privacy gate every incoming message passes through
 lib/ai.ts            Claude prompts: drafts, screenshot reading, wins
 lib/style.ts         natural-voice rules and the em dash clean-up
 lib/promises.ts      catches "I'll send..." in your replies
-lib/store.ts         JSON file store (data/db.json)
+lib/store.ts         data store: Redis on Vercel, JSON file locally
 ```
+
+## Deploy to Vercel
+
+Vercel's servers can't keep files, so the app stores its data in Redis there.
+
+1. Import the GitHub repo in Vercel and deploy.
+2. In the Vercel project: **Storage → Create Database → Upstash for Redis** (free
+   tier) and connect it to the project. That adds `KV_REST_API_URL` and
+   `KV_REST_API_TOKEN` automatically.
+3. Add your other settings under **Settings → Environment Variables** (the same
+   names as `.env.local`: `ANTHROPIC_API_KEY`, `WHATSAPP_TOKEN`,
+   `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_SECRET`, ...).
+4. Redeploy. The WhatsApp webhook URL is then
+   `https://YOUR-APP.vercel.app/api/webhooks/whatsapp`.
+
+Without Redis the app still loads on Vercel, but data is temporary and the
+Channels screen says so.
 
 ## Before real users
 
-- **Storage:** `lib/store.ts` is a JSON file. Fine locally or on one small server
-  with a disk (Railway, Render, Fly). For Vercel or more users, swap it for
-  Supabase/Postgres. The rest of the app only calls `readDB`, `writeDB`, `updateDB`.
+- **Storage:** `lib/store.ts` keeps everything in one JSON document. Locally it's
+  `data/db.json`; on Vercel it uses Redis (below). For many coaches, move to
+  Postgres. The rest of the app only calls `readDB`, `writeDB`, `updateDB`.
 - **Accounts:** there's no login yet. It's one coach per install.
 - **Privacy:** add a data processing agreement, delete-my-data, and tell clients
   an assistant helps their coach. Keep health details out of anything posted.

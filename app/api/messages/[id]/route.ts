@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as { action?: "send" | "skip"; text?: string };
-  const db = readDB();
+  const db = await readDB();
   const msg = db.messages.find((m) => m.id === id);
   if (!msg) return Response.json({ error: "Message not found" }, { status: 404 });
   const contact = db.contacts.find((c) => c.id === msg.clientId);
   if (!contact) return Response.json({ error: "Client not found" }, { status: 404 });
 
   if (body.action === "skip") {
-    updateDB((fresh) => {
+    await updateDB((fresh) => {
       const m = fresh.messages.find((x) => x.id === id);
       if (m) m.status = "skipped";
     });
@@ -31,7 +31,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const text = enforceStyle(body.text, db.settings.style, db.settings.coachName);
   const result = await sendReply(contact, msg.channel, text);
 
-  const promise = updateDB((fresh) => {
+  const promise = await updateDB((fresh) => {
     const m = fresh.messages.find((x) => x.id === id);
     if (m) {
       m.status = "replied";

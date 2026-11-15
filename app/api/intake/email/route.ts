@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
   if (!parsed.email) return Response.json({ error: "No sender found" }, { status: 400 });
 
-  const db = readDB();
+  const db = await readDB();
 
   // A coach forwarding an email by hand is a clear signal. If the sender's name
   // matches a client exactly, link this email address to that client.
@@ -59,13 +59,13 @@ export async function POST(req: Request) {
 
   const gate = admit(db, "email", parsed.email, parsed.name);
   if (!gate.admitted) {
-    writeDB(db); // saves only the ignored counter / pending name, never the email body
+    await writeDB(db); // saves only the ignored counter / pending name, never the email body
     return Response.json({ ok: true, stored: false, reason: gate.reason });
   }
 
   const body = cleanEmail(text) || subject;
-  writeDB(db); // keeps a newly linked email address
-  updateDB((fresh) => {
+  await writeDB(db); // keeps a newly linked email address
+  await updateDB((fresh) => {
     fresh.messages.filter((m) => m.clientId === gate.client.id && m.status === "needs_reply").forEach((m) => (m.status = "info"));
     fresh.messages.push({
       id: uid("m_"),

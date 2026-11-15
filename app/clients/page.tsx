@@ -4,7 +4,7 @@ import ClientsClient from "./ClientsClient";
 
 export const dynamic = "force-dynamic";
 
-export default function ClientsPage() {
-  const db = readDB();
+export default async function ClientsPage() {
+  const db = await readDB();
   return <ClientsClient rows={clientRows(db)} />;
 }

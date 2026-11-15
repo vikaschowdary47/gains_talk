@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     onboarded?: boolean;
   };
 
-  const settings = updateDB((db) => {
+  const settings = await updateDB((db) => {
     if (body.apps) db.settings.apps = body.apps.filter(isChannel);
 
     if (body.clients) {

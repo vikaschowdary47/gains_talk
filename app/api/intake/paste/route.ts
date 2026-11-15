@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   };
 
   const channel: Channel = isChannel(body.channel) ? body.channel : "texts";
-  const db = readDB();
+  const db = await readDB();
 
   let lines: { from: "client" | "coach"; text: string }[] = [];
   let personName: string | undefined;
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Pick which client this is from. Only chats with your clients are saved." }, { status: 422 });
   }
 
-  const added = updateDB((fresh) => {
+  const added = await updateDB((fresh) => {
     const now = Date.now();
     const msgs: Message[] = lines.map((l, i) => ({
       id: uid("m_"),

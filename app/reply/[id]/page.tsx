@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function ReplyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ mode?: string }> }) {
   const { id } = await params;
   const { mode } = await searchParams;
-  const db = readDB();
+  const db = await readDB();
   const msg = db.messages.find((m) => m.id === id);
   const contact = msg && db.contacts.find((c) => c.id === msg.clientId);
   if (!msg || !contact) notFound();

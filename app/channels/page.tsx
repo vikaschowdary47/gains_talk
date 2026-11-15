@@ -1,12 +1,12 @@
-import { readDB } from "@/lib/store";
+import { readDB, storageMode } from "@/lib/store";
 import { aiEnabled } from "@/lib/ai";
 import { whatsappApiReady } from "@/lib/send";
 import ChannelsClient, { type ChannelRow } from "./ChannelsClient";
 
 export const dynamic = "force-dynamic";
 
-export default function ChannelsPage() {
-  const db = readDB();
+export default async function ChannelsPage() {
+  const db = await readDB();
   const clientCount = db.contacts.filter((c) => c.isClient).length;
   const domain = process.env.INBOUND_EMAIL_DOMAIN || "in.gainstalk.com";
 
@@ -39,6 +39,7 @@ export default function ChannelsPage() {
       forwarding={`${db.settings.forwardingLocalPart}@${domain}`}
       emailReady={Boolean(process.env.INBOUND_EMAIL_TOKEN)}
       ai={aiEnabled()}
+      storage={storageMode()}
     />
   );
 }

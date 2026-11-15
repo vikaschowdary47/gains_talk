@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     return new Response("Bad signature", { status: 401 });
   }
   const payload = JSON.parse(raw || "{}") as { entry?: { changes?: { field?: string; value?: WaValue }[] }[] };
-  const db = readDB();
+  const db = await readDB();
   let stored = 0;
 
   for (const entry of payload.entry ?? []) {
@@ -70,6 +70,6 @@ export async function POST(req: Request) {
     }
   }
 
-  writeDB(db);
+  await writeDB(db);
   return Response.json({ ok: true, stored });
 }

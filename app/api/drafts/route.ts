@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const nudge = mode === "nudge";
   if (!messageId) return Response.json({ error: "messageId is required" }, { status: 400 });
 
-  const db = readDB();
+  const db = await readDB();
   const msg = db.messages.find((m) => m.id === messageId);
   if (!msg) return Response.json({ error: "Message not found" }, { status: 404 });
   const cached = nudge ? msg.nudgeDrafts : msg.drafts;
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
   try {
     const drafts = await generateDrafts(db, msg, nudge ? "nudge" : "reply");
-    updateDB((fresh) => {
+    await updateDB((fresh) => {
       const m = fresh.messages.find((x) => x.id === messageId);
       if (m) {
         if (nudge) m.nudgeDrafts = drafts;

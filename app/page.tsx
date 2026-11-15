@@ -3,7 +3,7 @@ import { readDB } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const db = readDB();
+export default async function Home() {
+  const db = await readDB();
   redirect(db.settings.onboarded ? "/today" : "/welcome");
 }

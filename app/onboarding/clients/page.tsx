@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ChooseClientsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const { from } = await searchParams;
-  const db = readDB();
+  const db = await readDB();
   const people = db.contacts.map((c) => ({
     id: c.id,
     name: c.name,
