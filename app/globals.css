@@ -396,3 +396,10 @@ button { cursor: pointer; }
 .remove-confirm { display: flex; flex-direction: column; gap: 10px; background: #FCEBEB; color: #6E1E1E; border-radius: 18px; padding: 14px; }
 .btn-danger { background: #C93838; color: #fff; }
 .legal-mark { width: 38px; height: 38px; border-radius: 11px; background: var(--navy); display: inline-flex; align-items: center; justify-content: center; }
+.wa-check { margin-top: 8px; background: var(--bg); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.wa-check ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wa-check li { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 18px; }
+.wa-check li svg { flex: none; margin-top: 2px; }
+.wa-check li.ok svg { color: var(--mint-ink); }
+.wa-check li.bad svg { color: #A32D2D; }
+.wa-x { flex: none; width: 16px; height: 16px; border-radius: 8px; background: #A32D2D; color: #fff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }

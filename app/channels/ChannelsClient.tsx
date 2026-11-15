@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Channel } from "@/lib/types";
 import { Icon } from "@/components/Icon";
@@ -41,6 +42,16 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
     } catch {
       showToast(p.forwarding);
     }
+  };
+
+  type Check = { label: string; ok: boolean; detail: string };
+  const [waCheck, setWaCheck] = useState<{ checks: Check[]; canFix: boolean } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const checkWhatsApp = async (fix = false) => {
+    setChecking(true);
+    const res = await postJSON<{ checks: Check[]; canFix: boolean }>("/api/whatsapp/check", { fix });
+    setChecking(false);
+    setWaCheck(res.error ? { checks: [{ label: "Check", ok: false, detail: res.error }], canFix: false } : res);
   };
 
   const simulate = async (channel: Channel, label: string, newPerson = false) => {
@@ -109,7 +120,29 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                   <button type="button" className="btn btn-pill sm" onClick={() => simulate(r.channel, r.name)}>
                     Send a test message
                   </button>
+                  {r.channel === "whatsapp" && r.state !== "setup" && (
+                    <button type="button" className="btn btn-pill sm" onClick={() => checkWhatsApp(false)} disabled={checking}>
+                      {checking ? "Checking…" : "Check connection"}
+                    </button>
+                  )}
                 </span>
+                {r.channel === "whatsapp" && waCheck && (
+                  <div className="wa-check" role="status">
+                    <ul>
+                      {waCheck.checks.map((c, i) => (
+                        <li key={i} className={c.ok ? "ok" : "bad"}>
+                          {c.ok ? <Icon name="check" size={14} stroke={3} /> : <span className="wa-x" aria-hidden="true">!</span>}
+                          <span><strong>{c.label}.</strong> {c.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {waCheck.canFix && (
+                      <button type="button" className="btn btn-pill sm btn-primary" onClick={() => checkWhatsApp(true)} disabled={checking}>
+                        {checking ? "Linking…" : "Link this WhatsApp account"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </span>
             </li>
           ))}
