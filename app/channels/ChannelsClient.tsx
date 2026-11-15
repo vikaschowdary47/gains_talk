@@ -11,6 +11,15 @@ export interface ChannelRow {
   name: string;
   state: "on" | "partial" | "setup" | "soon" | "manual";
   note: string;
+  /** Latest webhook call from Meta; null = expected but nothing yet. */
+  lastHook?: { at: string; ok: boolean; result: string } | null;
+}
+
+/** "2:52 PM" today, "Nov 14, 2:52 PM" otherwise, in the coach's own time zone. */
+function whenLabel(iso: string): string {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${time}`;
 }
 
 const BADGE: Record<ChannelRow["state"], { label: string; bg: string; ink: string }> = {
@@ -80,6 +89,17 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                   <span className="pill" style={{ background: BADGE[r.state].bg, color: BADGE[r.state].ink }}>{BADGE[r.state].label}</span>
                 </span>
                 <span style={{ fontSize: 13, lineHeight: "18px", color: "var(--muted)" }}>{r.note}</span>
+                {r.lastHook !== undefined && (
+                  <span className={`hook-status ${r.lastHook ? (r.lastHook.ok ? "ok" : "bad") : "none"}`}>
+                    {r.lastHook ? (
+                      <>
+                        Last from Meta, <time dateTime={r.lastHook.at} suppressHydrationWarning>{whenLabel(r.lastHook.at)}</time>: {r.lastHook.result}
+                      </>
+                    ) : (
+                      "Nothing from Meta yet. Message your number to test."
+                    )}
+                  </span>
+                )}
                 <span className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 6 }}>
                   {r.state === "manual" && (
                     <Link href="/add" className="btn btn-pill sm btn-amber">

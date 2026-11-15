@@ -371,3 +371,9 @@ button { cursor: pointer; }
 /* "Existing client…" picker on the new-people card: pill-sized, not full width */
 .select.pending-link { width: auto; max-width: 190px; padding: 7px 12px; font-size: 14px; line-height: 20px; border-radius: 999px; }
 .pending-list > li + li { border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* Channels: what Meta last sent us */
+.hook-status { font-size: 13px; line-height: 18px; margin-top: 2px; padding: 6px 10px; border-radius: 10px; align-self: flex-start; }
+.hook-status.ok { background: var(--mint-tint, #E3F7EE); color: var(--mint-ink, #0F6E4A); }
+.hook-status.bad { background: #FCEBEB; color: #A32D2D; }
+.hook-status.none { background: #F1F1F5; color: var(--muted); }

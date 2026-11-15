@@ -61,6 +61,14 @@ export default async function ChannelsPage() {
     },
   ];
 
+  // What Meta last sent us, per channel, so setup problems are visible.
+  for (const r of rows) {
+    if (r.channel !== "whatsapp" && r.channel !== "instagram" && r.channel !== "messenger") continue;
+    const last = (db.webhookLog ?? []).find((e) => e.channel === r.channel);
+    if (last) r.lastHook = last;
+    else if (r.state !== "setup") r.lastHook = null;
+  }
+
   return (
     <ChannelsClient
       rows={rows}

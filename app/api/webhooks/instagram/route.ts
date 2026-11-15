@@ -1,11 +1,13 @@
 import { readDB, writeDB } from "@/lib/store";
 import { addHandle, ingest } from "@/lib/ingest";
 import { lookupProfile, verifyChallenge, verifyMetaSignature } from "@/lib/meta";
+import { SIGNATURE_HELP, describe, logHook, loggedChallenge, recordHook } from "@/lib/hooklog";
+import type { IngestResult } from "@/lib/ingest";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  return verifyChallenge(req, process.env.INSTAGRAM_VERIFY_TOKEN || process.env.META_VERIFY_TOKEN);
+  return loggedChallenge("instagram", verifyChallenge(req, process.env.INSTAGRAM_VERIFY_TOKEN || process.env.META_VERIFY_TOKEN));
 }
 
 interface IgEvent {
@@ -23,6 +25,7 @@ interface IgEvent {
 export async function POST(req: Request) {
   const raw = await req.text();
   if (!verifyMetaSignature(raw, req.headers.get("x-hub-signature-256"))) {
+    await recordHook("instagram", false, SIGNATURE_HELP);
     return new Response("Bad signature", { status: 401 });
   }
   const payload = JSON.parse(raw || "{}") as { entry?: { messaging?: IgEvent[] }[] };
@@ -36,6 +39,7 @@ export async function POST(req: Request) {
 
   const db = await readDB();
   let stored = 0;
+  const results: IngestResult[] = [];
   for (const ev of events) {
     const id = ev.sender!.id;
     const prof = profiles.get(id) ?? {};
@@ -46,11 +50,13 @@ export async function POST(req: Request) {
       if (res && prof.username) db.pending = db.pending.filter((p) => !(p.handle.channel === "instagram" && p.handle.value === prof.username));
       res = ingest(db, { channel: "instagram", handle: id, name: prof.name ?? prof.username, text, at: ev.timestamp, externalId: ev.message!.mid });
     }
+    results.push(res);
     if (res.stored) {
       addHandle(res.client, "instagram", id);
       stored++;
     }
   }
+  logHook(db, "instagram", true, describe(results));
   await writeDB(db);
   return Response.json({ ok: true, stored });
 }

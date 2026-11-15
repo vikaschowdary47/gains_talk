@@ -132,4 +132,13 @@ export interface DB {
   promises: CoachPromise[];
   wins: Win[];
   pending: PendingContact[];
+  /** Latest webhook calls from Meta, newest first. No message text. */
+  webhookLog?: HookEvent[];
+}
+
+export interface HookEvent {
+  at: string;
+  channel: Channel;
+  ok: boolean;
+  result: string;
 }

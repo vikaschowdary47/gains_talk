@@ -3,12 +3,14 @@ import { findByHandle } from "@/lib/privacy";
 import { ingest } from "@/lib/ingest";
 import { verifyChallenge, verifyMetaSignature } from "@/lib/meta";
 import { uid } from "@/lib/util";
+import { SIGNATURE_HELP, describe, logHook, loggedChallenge, recordHook } from "@/lib/hooklog";
+import type { IngestResult } from "@/lib/ingest";
 
 export const dynamic = "force-dynamic";
 
 /** Meta calls this once to confirm the webhook URL. */
 export async function GET(req: Request) {
-  return verifyChallenge(req, process.env.WHATSAPP_VERIFY_TOKEN);
+  return loggedChallenge("whatsapp", verifyChallenge(req, process.env.WHATSAPP_VERIFY_TOKEN));
 }
 
 interface WaValue {
@@ -25,11 +27,14 @@ interface WaValue {
 export async function POST(req: Request) {
   const raw = await req.text();
   if (!verifyMetaSignature(raw, req.headers.get("x-hub-signature-256"))) {
+    await recordHook("whatsapp", false, SIGNATURE_HELP);
     return new Response("Bad signature", { status: 401 });
   }
   const payload = JSON.parse(raw || "{}") as { entry?: { changes?: { field?: string; value?: WaValue }[] }[] };
   const db = await readDB();
   let stored = 0;
+  let echoes = 0;
+  const results: IngestResult[] = [];
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
@@ -46,6 +51,7 @@ export async function POST(req: Request) {
           at: Number(msg.timestamp) * 1000,
           externalId: msg.id,
         });
+        results.push(res);
         if (res.stored) stored++; // non-clients are dropped inside ingest, never stored
       }
 
@@ -63,10 +69,13 @@ export async function POST(req: Request) {
           status: "info",
         });
         stored++;
+        echoes++;
       }
     }
   }
 
+  // Delivery receipts (sent, read) come through here too; only log real messages.
+  if (results.length || echoes) logHook(db, "whatsapp", true, describe(results, echoes));
   await writeDB(db);
   return Response.json({ ok: true, stored });
 }
