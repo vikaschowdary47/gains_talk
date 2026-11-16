@@ -3,7 +3,7 @@ import { addHandle, ingest } from "@/lib/ingest";
 import { lookupProfile, verifyChallenge, verifyMetaSignature } from "@/lib/meta";
 import { SIGNATURE_HELP, describe, logHook, loggedChallenge, recordHook } from "@/lib/hooklog";
 import type { IngestResult } from "@/lib/ingest";
-import { igRefreshIfNeeded, igToken } from "@/lib/instagram";
+import { igApi, igToken } from "@/lib/instagram";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +35,11 @@ export async function POST(req: Request) {
   if (events.length === 0) return Response.json({ ok: true, stored: 0 });
 
   const db = await readDB();
-  await igRefreshIfNeeded(db);
   const token = igToken(db);
+  const base = igApi(db).base;
   const profiles = new Map<string, { name?: string; username?: string }>();
   for (const ev of events) {
-    if (!profiles.has(ev.sender!.id)) profiles.set(ev.sender!.id, await lookupProfile("instagram", ev.sender!.id, token));
+    if (!profiles.has(ev.sender!.id)) profiles.set(ev.sender!.id, await lookupProfile("instagram", ev.sender!.id, token, base));
   }
 
   let stored = 0;

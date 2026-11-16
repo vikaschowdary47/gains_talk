@@ -2,7 +2,7 @@ import "server-only";
 import type { Channel, Contact, DB } from "./types";
 import { manualSendUrl } from "./channels";
 import { graphBase, graphVersion } from "./meta";
-import { igToken } from "./instagram";
+import { igApi, igToken } from "./instagram";
 
 export interface SendResult {
   via: "api" | "manual";
@@ -90,7 +90,7 @@ export async function sendReply(contact: Contact, channel: Channel, text: string
 
   if (channel === "instagram" && instagramApiReady(db) && apiId) {
     const err = await post(
-      `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}/me/messages`,
+      `${igApi(db).base}/${igApi(db).account}/messages`,
       { Authorization: `Bearer ${igToken(db)}` },
       { recipient: { id: apiId }, message: { text } }
     );

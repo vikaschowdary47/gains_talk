@@ -35,12 +35,12 @@ export function graphVersion(): string {
 }
 
 /** Best-effort profile lookup so new senders show a real name, not a number. */
-export async function lookupProfile(channel: "instagram" | "messenger", userId: string, igToken?: string): Promise<{ name?: string; username?: string }> {
+export async function lookupProfile(channel: "instagram" | "messenger", userId: string, igToken?: string, igBase?: string): Promise<{ name?: string; username?: string }> {
   try {
     const ctrl = AbortSignal.timeout(2500);
     const token = igToken || process.env.INSTAGRAM_TOKEN;
     if (channel === "instagram" && token) {
-      const res = await fetch(`${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}/${userId}?fields=name,username`, {
+      const res = await fetch(`${igBase || `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}`}/${userId}?fields=name,username`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: ctrl,
         cache: "no-store",

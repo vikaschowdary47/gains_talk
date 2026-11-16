@@ -87,18 +87,18 @@ to GainsTalk through Meta's Cloud API, including messages the coach sends from t
 Note: since October 2026, Meta bills replies sent through the API per message
 (with a monthly free allowance). Replies sent from the phone app stay free.
 
-### Instagram
-1. In your Meta app, add the **Instagram** use case and open **API setup with Instagram login**.
-2. Copy the **Instagram app ID** and **Instagram app secret** into `INSTAGRAM_APP_ID` and
-   `INSTAGRAM_APP_SECRET`. Add `https://YOUR-APP/api/instagram/callback` as a redirect URL.
-3. Webhooks: callback `https://YOUR-APP/api/webhooks/instagram`, verify token =
+### Instagram (Unified login)
+1. Meta app → Use cases → add **Manage messaging & content on Instagram** → Customize →
+   **API setup with Unified login**.
+2. **Configure your app:** create a configuration with a System-user access token, the
+   Instagram account asset and `instagram_basic` + `instagram_manage_messages`. Register the
+   redirect URL `https://YOUR-APP/api/instagram/callback`. Copy the **configuration ID**.
+3. **Configure webhooks:** callback `https://YOUR-APP/api/webhooks/instagram`, verify token =
    `INSTAGRAM_VERIFY_TOKEN`, subscribe to `messages`.
-4. Until the app has Instagram Advanced Access, only accounts added as **Instagram testers**
-   (App roles) work. Add the coach's account, and the test client's account, and accept the
-   invite in Instagram (Settings → Website permissions → Tester invites).
-5. In the Instagram app: Settings → Messages → Connected tools → **Allow access to messages**.
-6. On Channels, tap **Connect Instagram** and sign in with the coach's professional account.
-   The token is stored and refreshed automatically.
+4. Vercel: `META_APP_ID`, `META_APP_SECRET`, `INSTAGRAM_CONFIG_ID`, `INSTAGRAM_VERIFY_TOKEN`.
+5. The Instagram professional account must be in your Meta business portfolio, and (before
+   App Review) have the **Instagram Tester** role on the app.
+6. On Channels, tap **Connect Instagram**, pick the business portfolio and Instagram account.
 
 ### Facebook Messenger
 1. Add the **Messenger** product to the same Meta app and connect the coach's Page.
