@@ -23,14 +23,18 @@ export async function checkInstagram(fix: boolean): Promise<{ checks: Check[]; c
   if (!token) return { checks: [{ label: "Access token", ok: false, detail: "GainsTalk has no Instagram token. Add INSTAGRAM_TOKEN in Vercel and redeploy." }], canFix: false };
 
   const { base, account } = igApi(db);
-  const me = await call(`${base}/${account}?fields=id,username`, token);
-  if (!me.ok) {
-    checks.push({ label: "Access token", ok: false, detail: `Meta refused it: ${me.error}. Generate a new token on the Meta app page and update INSTAGRAM_TOKEN.` });
+  const where = `${new URL(base).host}, account "${account}"`;
+  if (account === "me" && !token.startsWith("IG")) {
+    checks.push({ label: "Instagram account ID", ok: false, detail: `INSTAGRAM_ACCOUNT_ID isn't set in Vercel, so this token points at a Facebook profile instead of Instagram. Add INSTAGRAM_ACCOUNT_ID = your Instagram account ID (17841…) and redeploy.` });
     return { checks, canFix: false };
   }
-  const username = me.json.username as string | undefined;
+  const me = await call(`${base}/${account}?fields=id`, token);
+  if (!me.ok) {
+    checks.push({ label: "Access token", ok: false, detail: `Meta refused it (${where}): ${me.error}. Generate a new token on the Meta app page and update INSTAGRAM_TOKEN.` });
+    return { checks, canFix: false };
+  }
   const id = me.json.id as string;
-  checks.push({ label: "Access token", ok: true, detail: `Meta accepted it for ${username ? `@${username}` : `account ${id}`} (id ${id}).` });
+  checks.push({ label: "Access token", ok: true, detail: `Meta accepted it (${where}, id ${id}).` });
 
   if (fix) {
     const r = await call(`${base}/${account}/subscribed_apps`, token, "POST", new URLSearchParams({ subscribed_fields: "messages" }));

@@ -87,7 +87,7 @@ export async function igConnect(code: string): Promise<IgConnection> {
 
 /** The token to use for Instagram calls: the connected account first, then INSTAGRAM_TOKEN. */
 export function igToken(db?: DB): string | undefined {
-  return db?.settings.instagram?.token || process.env.INSTAGRAM_TOKEN || undefined;
+  return db?.settings.instagram?.token || process.env.INSTAGRAM_TOKEN?.trim() || undefined;
 }
 
 /** Where Instagram API calls go: Unified Login (connected account) or a hand-pasted Instagram Login token. */
@@ -96,8 +96,8 @@ export function igApi(db?: DB): { base: string; account: string } {
   if (c) return { base: G(), account: c.userId };
   // A token generated in the App Dashboard: Instagram user tokens start with "IG" and use
   // graph.instagram.com; business (system-user) tokens use graph.facebook.com and need the account ID.
-  const token = process.env.INSTAGRAM_TOKEN || "";
-  const account = process.env.INSTAGRAM_ACCOUNT_ID || "me";
+  const token = process.env.INSTAGRAM_TOKEN?.trim() || "";
+  const account = process.env.INSTAGRAM_ACCOUNT_ID?.trim() || "me";
   if (token.startsWith("IG")) return { base: `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}`, account };
   return { base: G(), account };
 }
