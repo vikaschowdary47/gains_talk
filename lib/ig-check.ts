@@ -42,8 +42,26 @@ export async function checkInstagram(fix: boolean): Promise<{ checks: Check[]; c
     errors.push(`${new URL(t.base).host}/${t.account}: ${r2.error}`);
   }
   if (!base) {
-    checks.push({ label: "Access token", ok: false, detail: `No Meta server accepted it. ${errors.join(" | ")}` });
-    return { checks, canFix: false };
+    // Ask Meta what this token can actually see, so the next step is obvious.
+    const fb = FB_BASE();
+    const who = await call(`${fb}/me?fields=id,name`, token);
+    const assigned = await call(`${fb}/me/assigned_instagram_accounts?fields=id,username`, token);
+    const pages = await call(`${fb}/me/accounts?fields=name,instagram_business_account{id,username}`, token);
+    const dbg = await call(`${fb}/debug_token?input_token=${encodeURIComponent(token)}`, token);
+    const d = (dbg.json.data ?? {}) as { type?: string; scopes?: string[]; granular_scopes?: { scope: string; target_ids?: string[] }[] };
+    const found = [
+      ...((assigned.json.data as { id: string; username?: string }[] | undefined) ?? []).map((a) => ({ id: a.id, username: a.username })),
+      ...((pages.json.data as { instagram_business_account?: { id: string; username?: string } }[] | undefined) ?? []).flatMap((p) => (p.instagram_business_account ? [p.instagram_business_account] : [])),
+    ];
+    if (found.length) {
+      const pick = found[0];
+      base = fb; account = pick.id;
+      checks.push({ label: "Access token", ok: true, detail: `Found ${pick.username ? `@${pick.username}` : "an Instagram account"} with id ${pick.id}. Using that.` });
+    } else {
+      checks.push({ label: "Access token", ok: false, detail: `No Meta server accepted it. ${errors.join(" | ")}` });
+      checks.push({ label: "What the token sees", ok: false, detail: `me: ${who.ok ? JSON.stringify(who.json) : who.error} | assigned IG: ${assigned.ok ? JSON.stringify(assigned.json.data) : assigned.error} | pages: ${pages.ok ? JSON.stringify(pages.json.data) : pages.error} | type ${d.type ?? "?"}, scopes ${(d.scopes ?? []).join(",") || dbg.error}, targets ${JSON.stringify(d.granular_scopes ?? [])}` });
+      return { checks, canFix: false };
+    }
   }
   await updateDB((d) => { d.settings.igRoute = { base, account }; });
 
