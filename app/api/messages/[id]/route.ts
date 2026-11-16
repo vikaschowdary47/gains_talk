@@ -31,7 +31,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const text = enforceStyle(body.text, db.settings.style, db.settings.coachName);
   // Test messages and sample clients have made-up numbers: mark as replied, send nothing.
-  const result = msg.demo || isSampleContact(contact) ? { via: "demo" as const } : await sendReply(contact, msg.channel, text, db);
+  // A message that really came in from a platform (it has the platform's id) is answered for real,
+  // even if the coach linked it to a sample client.
+  const fake = msg.demo || (isSampleContact(contact) && !msg.externalId);
+  const result = fake ? { via: "demo" as const } : await sendReply(contact, msg.channel, text, db);
 
   const promise = await updateDB((fresh) => {
     const m = fresh.messages.find((x) => x.id === id);
