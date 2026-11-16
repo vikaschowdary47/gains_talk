@@ -1,6 +1,6 @@
 import "server-only";
-import { readDB } from "./store";
-import { igApi, igToken } from "./instagram";
+import { readDB, updateDB } from "./store";
+import { FB_BASE, IG_BASE, igToken } from "./instagram";
 
 type Check = { label: string; ok: boolean; detail: string };
 
@@ -22,19 +22,30 @@ export async function checkInstagram(fix: boolean): Promise<{ checks: Check[]; c
   const checks: Check[] = [];
   if (!token) return { checks: [{ label: "Access token", ok: false, detail: "GainsTalk has no Instagram token. Add INSTAGRAM_TOKEN in Vercel and redeploy." }], canFix: false };
 
-  const { base, account } = igApi(db);
-  const where = `${new URL(base).host}, account "${account}"`;
-  if (account === "me" && !token.startsWith("IG")) {
-    checks.push({ label: "Instagram account ID", ok: false, detail: `INSTAGRAM_ACCOUNT_ID isn't set in Vercel, so this token points at a Facebook profile instead of Instagram. Add INSTAGRAM_ACCOUNT_ID = your Instagram account ID (17841…) and redeploy.` });
+  // Different Meta token types answer on different servers; try each and keep the one that works.
+  const envId = process.env.INSTAGRAM_ACCOUNT_ID?.trim();
+  const tries: { base: string; account: string }[] = [
+    { base: IG_BASE(), account: "me" },
+    ...(envId ? [{ base: FB_BASE(), account: envId }, { base: IG_BASE(), account: envId }] : []),
+  ];
+  let base = "", account = "", id = "";
+  const errors: string[] = [];
+  for (const t of tries) {
+    const r = await call(`${t.base}/${t.account}?fields=id,username`, token);
+    const r2 = r.ok ? r : await call(`${t.base}/${t.account}?fields=id`, token);
+    if (r2.ok) {
+      base = t.base; account = t.account; id = String(r2.json.id ?? "");
+      const name = r2.json.username ? `@${r2.json.username}` : `account ${id}`;
+      checks.push({ label: "Access token", ok: true, detail: `Meta accepted it for ${name} (${new URL(t.base).host}).` });
+      break;
+    }
+    errors.push(`${new URL(t.base).host}/${t.account}: ${r2.error}`);
+  }
+  if (!base) {
+    checks.push({ label: "Access token", ok: false, detail: `No Meta server accepted it. ${errors.join(" | ")}` });
     return { checks, canFix: false };
   }
-  const me = await call(`${base}/${account}?fields=id`, token);
-  if (!me.ok) {
-    checks.push({ label: "Access token", ok: false, detail: `Meta refused it (${where}): ${me.error}. Generate a new token on the Meta app page and update INSTAGRAM_TOKEN.` });
-    return { checks, canFix: false };
-  }
-  const id = me.json.id as string;
-  checks.push({ label: "Access token", ok: true, detail: `Meta accepted it (${where}, id ${id}).` });
+  await updateDB((d) => { d.settings.igRoute = { base, account }; });
 
   if (fix) {
     const r = await call(`${base}/${account}/subscribed_apps`, token, "POST", new URLSearchParams({ subscribed_fields: "messages" }));

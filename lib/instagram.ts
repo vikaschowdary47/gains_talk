@@ -91,9 +91,13 @@ export function igToken(db?: DB): string | undefined {
 }
 
 /** Where Instagram API calls go: Unified Login (connected account) or a hand-pasted Instagram Login token. */
+export const IG_BASE = () => `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}`;
+export const FB_BASE = () => G();
+
 export function igApi(db?: DB): { base: string; account: string } {
   const c = db?.settings.instagram;
   if (c) return { base: G(), account: c.userId };
+  if (db?.settings.igRoute) return db.settings.igRoute;
   // A token generated in the App Dashboard: Instagram user tokens start with "IG" and use
   // graph.instagram.com; business (system-user) tokens use graph.facebook.com and need the account ID.
   const token = process.env.INSTAGRAM_TOKEN?.trim() || "";
