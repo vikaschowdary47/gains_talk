@@ -23,13 +23,13 @@ export async function checkInstagram(fix: boolean): Promise<{ checks: Check[]; c
   if (!token) return { checks: [{ label: "Access token", ok: false, detail: "GainsTalk has no Instagram token. Add INSTAGRAM_TOKEN in Vercel and redeploy." }], canFix: false };
 
   const { base, account } = igApi(db);
-  const me = await call(`${base}/${account}?fields=id,username,user_id`, token);
+  const me = await call(`${base}/${account}?fields=id,username`, token);
   if (!me.ok) {
     checks.push({ label: "Access token", ok: false, detail: `Meta refused it: ${me.error}. Generate a new token on the Meta app page and update INSTAGRAM_TOKEN.` });
     return { checks, canFix: false };
   }
   const username = me.json.username as string | undefined;
-  const id = (me.json.user_id as string | undefined) || (me.json.id as string);
+  const id = me.json.id as string;
   checks.push({ label: "Access token", ok: true, detail: `Meta accepted it for ${username ? `@${username}` : `account ${id}`} (id ${id}).` });
 
   if (fix) {
