@@ -47,19 +47,28 @@ export async function checkInstagram(fix: boolean): Promise<{ checks: Check[]; c
     const who = await call(`${fb}/me?fields=id,name`, token);
     const assigned = await call(`${fb}/me/assigned_instagram_accounts?fields=id,username`, token);
     const pages = await call(`${fb}/me/accounts?fields=name,instagram_business_account{id,username}`, token);
-    const dbg = await call(`${fb}/debug_token?input_token=${encodeURIComponent(token)}`, token);
+    const appToken = `${process.env.META_APP_ID?.trim()}|${process.env.META_APP_SECRET?.trim()}`;
+    const dbg = await call(`${fb}/debug_token?input_token=${encodeURIComponent(token)}`, appToken);
+    const d0 = (dbg.json.data ?? {}) as { granular_scopes?: { scope: string; target_ids?: string[] }[] };
+    const targetIds = [...new Set((d0.granular_scopes ?? []).flatMap((g) => g.target_ids ?? []))];
     const d = (dbg.json.data ?? {}) as { type?: string; scopes?: string[]; granular_scopes?: { scope: string; target_ids?: string[] }[] };
     const found = [
       ...((assigned.json.data as { id: string; username?: string }[] | undefined) ?? []).map((a) => ({ id: a.id, username: a.username })),
       ...((pages.json.data as { instagram_business_account?: { id: string; username?: string } }[] | undefined) ?? []).flatMap((p) => (p.instagram_business_account ? [p.instagram_business_account] : [])),
     ];
+    // The token's own permission targets (e.g. the Instagram account it was made for).
+    for (const tid of targetIds) {
+      if (found.some((f) => f.id === tid)) continue;
+      const t = await call(`${fb}/${tid}?fields=id,username`, token);
+      if (t.ok) found.push({ id: tid, username: t.json.username as string | undefined });
+    }
     if (found.length) {
       const pick = found[0];
       base = fb; account = pick.id;
       checks.push({ label: "Access token", ok: true, detail: `Found ${pick.username ? `@${pick.username}` : "an Instagram account"} with id ${pick.id}. Using that.` });
     } else {
       checks.push({ label: "Access token", ok: false, detail: `No Meta server accepted it. ${errors.join(" | ")}` });
-      checks.push({ label: "What the token sees", ok: false, detail: `me: ${who.ok ? JSON.stringify(who.json) : who.error} | assigned IG: ${assigned.ok ? JSON.stringify(assigned.json.data) : assigned.error} | pages: ${pages.ok ? JSON.stringify(pages.json.data) : pages.error} | type ${d.type ?? "?"}, scopes ${(d.scopes ?? []).join(",") || dbg.error}, targets ${JSON.stringify(d.granular_scopes ?? [])}` });
+      checks.push({ label: "What the token sees", ok: false, detail: `me: ${who.ok ? JSON.stringify(who.json) : who.error} | assigned IG: ${assigned.ok ? JSON.stringify(assigned.json.data) : assigned.error} | pages: ${pages.ok ? JSON.stringify(pages.json.data) : pages.error} | app ${(dbg.json.data as { app_id?: string } | undefined)?.app_id ?? "?"}, type ${d.type ?? "?"}, valid ${(dbg.json.data as { is_valid?: boolean } | undefined)?.is_valid}, scopes ${(d.scopes ?? []).join(",") || dbg.error}, targets ${JSON.stringify(d.granular_scopes ?? [])}` });
       return { checks, canFix: false };
     }
   }
