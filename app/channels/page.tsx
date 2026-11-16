@@ -3,13 +3,20 @@ import { readDB, storageMode } from "@/lib/store";
 import { timeLabel } from "@/lib/util";
 import { aiEnabled } from "@/lib/ai";
 import { instagramApiReady, messengerApiReady, whatsappApiReady } from "@/lib/send";
-import { twilioFrom, twilioReady } from "@/lib/twilio";
+import { instagramLoginReady } from "@/lib/instagram";
 import ChannelsClient, { type ChannelRow } from "./ChannelsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChannelsPage() {
+export default async function ChannelsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
   const db = await readDB();
+  const ig = db.settings.instagram;
+  const igNotice =
+    sp.ig === "connected" ? `Instagram connected${ig?.username ? ` as @${ig.username}` : ""}.`
+    : sp.ig === "error" ? `Instagram didn't connect. ${typeof sp.reason === "string" ? sp.reason : ""}`.trim()
+    : sp.ig === "setup" ? "Add INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET in Vercel first, then redeploy."
+    : undefined;
   const clientCount = db.contacts.filter((c) => c.isClient).length;
   const domain = process.env.INBOUND_EMAIL_DOMAIN || "in.gainstalk.com";
 
@@ -21,21 +28,21 @@ export default async function ChannelsPage() {
       channel: "whatsapp",
       name: "WhatsApp Business",
       state: whatsappApiReady() ? "on" : process.env.WHATSAPP_VERIFY_TOKEN ? "partial" : "setup",
-      note: twilioReady()
-        ? `Testing through Twilio's WhatsApp Sandbox (${twilioFrom()}). Replies send straight from here. Only chats with your chosen clients are read.`
-        : whatsappApiReady()
+      note: whatsappApiReady()
         ? "Connected. Replies send straight from here. Only chats with your chosen clients are read."
         : "Keep chatting on your phone. Connect through Meta to import your last 6 months of chats. Until then, replies open WhatsApp ready to send.",
     },
     {
       channel: "instagram",
       name: "Instagram",
-      state: instagramApiReady() && igVerify ? "on" : igVerify ? "partial" : "setup",
-      note: instagramApiReady() && igVerify
-        ? "Connected. DMs to your professional account arrive here and replies send straight from here."
-        : igVerify
-          ? "Receiving DMs. Add INSTAGRAM_TOKEN to send replies from here."
-          : "DMs to your professional account. Connect it in your Meta app. Until then, paste or share messages in.",
+      state: ig ? "on" : instagramApiReady(db) && igVerify ? "on" : "setup",
+      note: ig
+        ? `Connected as ${ig.username ? `@${ig.username}` : "your professional account"}. DMs arrive here and replies send straight from here.`
+        : instagramLoginReady()
+          ? "Connect your Instagram professional account (Business or Creator). DMs then arrive here, and replies send from here."
+          : "DMs to your professional account. Add INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET in Vercel to connect it. Until then, paste or share messages in.",
+      connect: !ig && instagramLoginReady() ? { href: "/api/instagram/connect", label: "Connect Instagram" } : undefined,
+      disconnect: ig ? "instagram" : undefined,
     },
     {
       channel: "messenger",
@@ -85,6 +92,7 @@ export default async function ChannelsPage() {
       emailReady={Boolean(process.env.INBOUND_EMAIL_TOKEN)}
       ai={aiEnabled()}
       storage={storageMode()}
+      notice={igNotice}
     />
     </>
   );

@@ -87,22 +87,18 @@ to GainsTalk through Meta's Cloud API, including messages the coach sends from t
 Note: since October 2026, Meta bills replies sent through the API per message
 (with a monthly free allowance). Replies sent from the phone app stay free.
 
-### WhatsApp through Twilio (testing without Meta approval)
-1. In Twilio: Messaging → WhatsApp → **Try out WhatsApp**. Send the join message from your phone.
-2. Sandbox settings → "When a message comes in": `https://YOUR-APP/api/webhooks/twilio` (POST).
-3. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_WHATSAPP_FROM` (the sandbox number).
-   WhatsApp replies then go out through Twilio. A sandbox join lasts 3 days; send it again after that.
-
 ### Instagram
-1. In your Meta app add the **Instagram** product (API setup with Instagram login) and
-   connect the coach's professional account.
-2. Webhook: `https://YOUR-APP/api/webhooks/instagram`, verify token =
-   `INSTAGRAM_VERIFY_TOKEN` (or `META_VERIFY_TOKEN`). Subscribe to `messages`.
-3. Generate an access token for the account and set `INSTAGRAM_TOKEN`, so replies
-   send from GainsTalk. Without it, Send copies the reply and opens the chat.
-4. Messages match a client by Instagram username or by the numeric id Instagram
-   sends. The first message from someone new waits on Today under
-   "New people messaged you".
+1. In your Meta app, add the **Instagram** use case and open **API setup with Instagram login**.
+2. Copy the **Instagram app ID** and **Instagram app secret** into `INSTAGRAM_APP_ID` and
+   `INSTAGRAM_APP_SECRET`. Add `https://YOUR-APP/api/instagram/callback` as a redirect URL.
+3. Webhooks: callback `https://YOUR-APP/api/webhooks/instagram`, verify token =
+   `INSTAGRAM_VERIFY_TOKEN`, subscribe to `messages`.
+4. Until the app has Instagram Advanced Access, only accounts added as **Instagram testers**
+   (App roles) work. Add the coach's account, and the test client's account, and accept the
+   invite in Instagram (Settings → Website permissions → Tester invites).
+5. In the Instagram app: Settings → Messages → Connected tools → **Allow access to messages**.
+6. On Channels, tap **Connect Instagram** and sign in with the coach's professional account.
+   The token is stored and refreshed automatically.
 
 ### Facebook Messenger
 1. Add the **Messenger** product to the same Meta app and connect the coach's Page.

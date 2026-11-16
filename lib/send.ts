@@ -1,8 +1,8 @@
 import "server-only";
-import type { Channel, Contact } from "./types";
+import type { Channel, Contact, DB } from "./types";
 import { manualSendUrl } from "./channels";
 import { graphBase, graphVersion } from "./meta";
-import { twilioReady, twilioSend } from "./twilio";
+import { igToken } from "./instagram";
 
 export interface SendResult {
   via: "api" | "manual";
@@ -14,10 +14,10 @@ export interface SendResult {
 }
 
 export function whatsappApiReady(): boolean {
-  return twilioReady() || Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
+  return Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
 }
-export function instagramApiReady(): boolean {
-  return Boolean(process.env.INSTAGRAM_TOKEN);
+export function instagramApiReady(db?: DB): boolean {
+  return Boolean(igToken(db));
 }
 export function messengerApiReady(): boolean {
   return Boolean(process.env.MESSENGER_PAGE_TOKEN);
@@ -70,20 +70,12 @@ async function post(url: string, headers: Record<string, string>, body: unknown)
  * through Meta's APIs when they're configured. Everything else returns a link:
  * the app copies the reply and opens the chat, and the coach taps send.
  */
-export async function sendReply(contact: Contact, channel: Channel, text: string): Promise<SendResult> {
+export async function sendReply(contact: Contact, channel: Channel, text: string, db?: DB): Promise<SendResult> {
   const handles = contact.handles.filter((h) => h.channel === channel).map((h) => h.value);
   // Numeric platform ids are for the API; usernames make better "open chat" links.
   const apiId = handles.find(isNumericId);
   const linkHandle = (channel === "instagram" || channel === "messenger" ? handles.find((h) => !isNumericId(h)) : handles[0]) ?? handles[0];
   const manual = (error?: string): SendResult => ({ via: "manual", openUrl: manualSendUrl(channel, linkHandle, text), ...(error ? { error } : {}) });
-
-  // Twilio (Sandbox or sender) takes WhatsApp when it's configured.
-  if (channel === "whatsapp" && twilioReady() && handles[0]) {
-    const res = await twilioSend(handles[0], text);
-    if ("sid" in res) return { via: "api", externalId: res.sid };
-    console.error("[send] Twilio error:", res.error);
-    return manual(`${res.error} The reply is copied so you can send it yourself.`);
-  }
 
   if (channel === "whatsapp" && whatsappApiReady() && handles[0]) {
     const err = await post(
@@ -96,10 +88,10 @@ export async function sendReply(contact: Contact, channel: Channel, text: string
     return manual(`${explainMetaError("WhatsApp", err)} The reply is copied so you can send it yourself.`);
   }
 
-  if (channel === "instagram" && instagramApiReady() && apiId) {
+  if (channel === "instagram" && instagramApiReady(db) && apiId) {
     const err = await post(
-      `https://graph.instagram.com/${graphVersion()}/me/messages`,
-      { Authorization: `Bearer ${process.env.INSTAGRAM_TOKEN}` },
+      `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}/me/messages`,
+      { Authorization: `Bearer ${igToken(db)}` },
       { recipient: { id: apiId }, message: { text } }
     );
     if (!err) return { via: "api" };

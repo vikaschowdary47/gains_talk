@@ -31,7 +31,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const text = enforceStyle(body.text, db.settings.style, db.settings.coachName);
   // Test messages and sample clients have made-up numbers: mark as replied, send nothing.
-  const result = msg.demo || isSampleContact(contact) ? { via: "demo" as const } : await sendReply(contact, msg.channel, text);
+  const result = msg.demo || isSampleContact(contact) ? { via: "demo" as const } : await sendReply(contact, msg.channel, text, db);
 
   const promise = await updateDB((fresh) => {
     const m = fresh.messages.find((x) => x.id === id);

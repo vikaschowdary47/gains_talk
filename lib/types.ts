@@ -127,6 +127,8 @@ export interface Settings {
   ignoredCount: number;
   /** IANA zone from the coach's browser, e.g. America/Chicago. */
   timeZone?: string;
+  /** The coach's connected Instagram professional account (Instagram Login). */
+  instagram?: { userId: string; username?: string; token: string; expiresAt: string; connectedAt: string };
 }
 
 export interface DB {

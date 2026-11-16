@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Channel } from "@/lib/types";
 import { Icon } from "@/components/Icon";
@@ -12,6 +12,10 @@ export interface ChannelRow {
   name: string;
   state: "on" | "partial" | "setup" | "soon" | "manual";
   note: string;
+  /** A sign-in button for this channel (Instagram Login). */
+  connect?: { href: string; label: string };
+  /** Show a Disconnect button for this connected channel. */
+  disconnect?: "instagram";
   /** Latest webhook call from Meta; null = expected but nothing yet. */
   lastHook?: { at: string; when: string; ok: boolean; result: string } | null;
 }
@@ -24,9 +28,21 @@ const BADGE: Record<ChannelRow["state"], { label: string; bg: string; ink: strin
   manual: { label: "Share in", bg: "var(--amber-tint)", ink: "var(--amber-ink)" },
 };
 
-export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: number; ignoredCount: number; forwarding: string; emailReady: boolean; ai: boolean; storage: "redis" | "temporary" | "local" }) {
+export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: number; ignoredCount: number; forwarding: string; emailReady: boolean; ai: boolean; storage: "redis" | "temporary" | "local"; notice?: string }) {
   const router = useRouter();
   const [toast, showToast] = useToast();
+  useEffect(() => {
+    if (!p.notice) return;
+    showToast(p.notice);
+    router.replace("/channels", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.notice]);
+  const disconnect = async (what: "instagram") => {
+    if (!window.confirm("Disconnect Instagram? DMs stop coming in until you connect again. Messages already here stay.")) return;
+    await postJSON(`/api/${what}/disconnect`, {});
+    showToast("Instagram disconnected");
+    router.refresh();
+  };
 
   const copy = async () => {
     try {
@@ -110,9 +126,15 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                       <Icon name="share" size={15} stroke={2.2} /> Add a message
                     </Link>
                   )}
+                  {r.connect && (
+                    <a href={r.connect.href} className="btn btn-pill sm btn-primary">{r.connect.label}</a>
+                  )}
                   <button type="button" className="btn btn-pill sm" onClick={() => simulate(r.channel, r.name)}>
                     Send a test message
                   </button>
+                  {r.disconnect && (
+                    <button type="button" className="btn btn-pill sm" onClick={() => disconnect(r.disconnect!)}>Disconnect</button>
+                  )}
                   {r.channel === "whatsapp" && r.state !== "setup" && (
                     <button type="button" className="btn btn-pill sm" onClick={() => checkWhatsApp(false)} disabled={checking}>
                       {checking ? "Checking…" : "Check connection"}

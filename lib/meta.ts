@@ -2,13 +2,15 @@ import "server-only";
 import crypto from "node:crypto";
 
 /** Meta (WhatsApp / Instagram / Messenger) webhook signature check. */
-export function verifyMetaSignature(rawBody: string, header: string | null): boolean {
-  const secret = process.env.META_APP_SECRET;
-  if (!secret) return true; // Not configured yet: accept (local testing only).
+export function verifyMetaSignature(rawBody: string, header: string | null, alsoSecret?: string): boolean {
+  const secrets = [process.env.META_APP_SECRET, alsoSecret].filter((s): s is string => Boolean(s));
+  if (secrets.length === 0) return true; // Not configured yet: accept (local testing only).
   if (!header?.startsWith("sha256=")) return false;
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
   const given = header.slice(7);
-  return expected.length === given.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(given));
+  return secrets.some((secret) => {
+    const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+    return expected.length === given.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(given));
+  });
 }
 
 /** Answer Meta's webhook verification handshake. */
@@ -33,12 +35,13 @@ export function graphVersion(): string {
 }
 
 /** Best-effort profile lookup so new senders show a real name, not a number. */
-export async function lookupProfile(channel: "instagram" | "messenger", userId: string): Promise<{ name?: string; username?: string }> {
+export async function lookupProfile(channel: "instagram" | "messenger", userId: string, igToken?: string): Promise<{ name?: string; username?: string }> {
   try {
     const ctrl = AbortSignal.timeout(2500);
-    if (channel === "instagram" && process.env.INSTAGRAM_TOKEN) {
-      const res = await fetch(`https://graph.instagram.com/${graphVersion()}/${userId}?fields=name,username`, {
-        headers: { Authorization: `Bearer ${process.env.INSTAGRAM_TOKEN}` },
+    const token = igToken || process.env.INSTAGRAM_TOKEN;
+    if (channel === "instagram" && token) {
+      const res = await fetch(`${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}/${userId}?fields=name,username`, {
+        headers: { Authorization: `Bearer ${token}` },
         signal: ctrl,
         cache: "no-store",
       });

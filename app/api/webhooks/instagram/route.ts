@@ -3,6 +3,7 @@ import { addHandle, ingest } from "@/lib/ingest";
 import { lookupProfile, verifyChallenge, verifyMetaSignature } from "@/lib/meta";
 import { SIGNATURE_HELP, describe, logHook, loggedChallenge, recordHook } from "@/lib/hooklog";
 import type { IngestResult } from "@/lib/ingest";
+import { igRefreshIfNeeded, igToken } from "@/lib/instagram";
 
 export const dynamic = "force-dynamic";
 
@@ -24,20 +25,23 @@ interface IgEvent {
  */
 export async function POST(req: Request) {
   const raw = await req.text();
-  if (!verifyMetaSignature(raw, req.headers.get("x-hub-signature-256"))) {
+  if (!verifyMetaSignature(raw, req.headers.get("x-hub-signature-256"), process.env.INSTAGRAM_APP_SECRET)) {
     await recordHook("instagram", false, SIGNATURE_HELP);
     return new Response("Bad signature", { status: 401 });
   }
   const payload = JSON.parse(raw || "{}") as { entry?: { messaging?: IgEvent[] }[] };
-  const events = (payload.entry ?? []).flatMap((e) => e.messaging ?? []).filter((ev) => ev.sender?.id && ev.message && !ev.message.is_echo);
+  const ownIds = new Set((payload.entry ?? []).map((e) => (e as { id?: string }).id).filter(Boolean));
+  const events = (payload.entry ?? []).flatMap((e) => e.messaging ?? []).filter((ev) => ev.sender?.id && ev.message && !ev.message.is_echo && !ownIds.has(ev.sender.id));
   if (events.length === 0) return Response.json({ ok: true, stored: 0 });
 
+  const db = await readDB();
+  await igRefreshIfNeeded(db);
+  const token = igToken(db);
   const profiles = new Map<string, { name?: string; username?: string }>();
   for (const ev of events) {
-    if (!profiles.has(ev.sender!.id)) profiles.set(ev.sender!.id, await lookupProfile("instagram", ev.sender!.id));
+    if (!profiles.has(ev.sender!.id)) profiles.set(ev.sender!.id, await lookupProfile("instagram", ev.sender!.id, token));
   }
 
-  const db = await readDB();
   let stored = 0;
   const results: IngestResult[] = [];
   for (const ev of events) {
