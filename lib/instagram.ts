@@ -98,6 +98,6 @@ export function igApi(db?: DB): { base: string; account: string } {
   // graph.instagram.com; business (system-user) tokens use graph.facebook.com and need the account ID.
   const token = process.env.INSTAGRAM_TOKEN?.trim() || "";
   const account = process.env.INSTAGRAM_ACCOUNT_ID?.trim() || "me";
-  if (token.startsWith("IG")) return { base: `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}`, account };
+  if (token.startsWith("IG")) return { base: `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}`, account: "me" };
   return { base: G(), account };
 }
