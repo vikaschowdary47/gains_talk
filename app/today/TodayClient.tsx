@@ -274,13 +274,13 @@ export default function TodayClient(props: {
                 </div>
                 <ul className="stack-sm pending-list" style={{ listStyle: "none", margin: 0, padding: 0, gap: 12 }}>
                   {pending.map((p) => (
-                    <li key={p.id} className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-                      <span className="grow" style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                        <span className="row" style={{ gap: 6 }}><ChannelChip channel={p.channel} /><span className="small muted">{p.seen}</span></span>
+                    <li key={p.id} className="pending-person">
+                      <span className="pending-who">
+                        <span className="pending-name">{p.name}</span>
+                        <span className="row" style={{ gap: 6, flexWrap: "wrap" }}><ChannelChip channel={p.channel} /><span className="small muted" style={{ whiteSpace: "nowrap" }}>{p.seen}</span></span>
                       </span>
-                      <span className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-                        <button type="button" className="btn btn-pill sm" onClick={() => decide(p, false)}>Not a client</button>
+                      <span className="pending-actions">
+                        <button type="button" className="btn btn-pill sm btn-primary" onClick={() => decide(p, true)}>Add as new client</button>
                         {props.clients.length > 0 && (
                           <select
                             className="select pending-link"
@@ -292,7 +292,7 @@ export default function TodayClient(props: {
                             {props.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                         )}
-                        <button type="button" className="btn btn-pill sm btn-primary" onClick={() => decide(p, true)}>Add as new client</button>
+                        <button type="button" className="btn btn-pill sm" onClick={() => decide(p, false)}>Not a client</button>
                       </span>
                     </li>
                   ))}

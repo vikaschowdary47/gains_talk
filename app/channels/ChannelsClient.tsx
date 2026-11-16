@@ -13,14 +13,7 @@ export interface ChannelRow {
   state: "on" | "partial" | "setup" | "soon" | "manual";
   note: string;
   /** Latest webhook call from Meta; null = expected but nothing yet. */
-  lastHook?: { at: string; ok: boolean; result: string } | null;
-}
-
-/** "2:52 PM" today, "Nov 14, 2:52 PM" otherwise, in the coach's own time zone. */
-function whenLabel(iso: string): string {
-  const d = new Date(iso);
-  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${time}`;
+  lastHook?: { at: string; when: string; ok: boolean; result: string } | null;
 }
 
 const BADGE: Record<ChannelRow["state"], { label: string; bg: string; ink: string }> = {
@@ -104,7 +97,7 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                   <span className={`hook-status ${r.lastHook ? (r.lastHook.ok ? "ok" : "bad") : "none"}`}>
                     {r.lastHook ? (
                       <>
-                        Last from Meta, <time dateTime={r.lastHook.at} suppressHydrationWarning>{whenLabel(r.lastHook.at)}</time>: {r.lastHook.result}
+                        Last from Meta, <time dateTime={r.lastHook.at}>{r.lastHook.when}</time>: {r.lastHook.result}
                       </>
                     ) : (
                       "Nothing from Meta yet. Message your number to test."

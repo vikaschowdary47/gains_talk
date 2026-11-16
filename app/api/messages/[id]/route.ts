@@ -48,7 +48,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       at: new Date().toISOString(),
       status: "info" as const,
     };
-    fresh.messages.push(out);
+    fresh.messages.push({
+      ...out,
+      sentVia: result.via,
+      ...("error" in result && result.error ? { sendError: result.error } : {}),
+      ...("externalId" in result && result.externalId ? { externalId: result.externalId } : {}),
+    });
     const p = detectPromise(fresh, out);
     if (p) fresh.promises.push(p);
     return p;

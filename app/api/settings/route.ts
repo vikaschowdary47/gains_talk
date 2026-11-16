@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     newClient?: { name: string; channel: string; handle: string };
     style?: Partial<StyleSettings>;
     onboarded?: boolean;
+    timeZone?: string;
   };
 
   const settings = await updateDB((db) => {
@@ -96,6 +97,14 @@ export async function POST(req: Request) {
     }
 
     if (typeof body.onboarded === "boolean") db.settings.onboarded = body.onboarded;
+    if (typeof body.timeZone === "string") {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: body.timeZone });
+        db.settings.timeZone = body.timeZone;
+      } catch {
+        /* not a real time zone: ignore */
+      }
+    }
     return db.settings;
   });
 

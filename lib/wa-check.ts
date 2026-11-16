@@ -1,10 +1,10 @@
 import "server-only";
-import { graphVersion } from "./meta";
+import { graphBase, graphVersion } from "./meta";
 
 export interface Check { label: string; ok: boolean; detail: string }
 export interface CheckResult { checks: Check[]; canFix: boolean; number?: string }
 
-const G = () => `${process.env.META_GRAPH_BASE || "https://graph.facebook.com"}/${graphVersion()}`;
+const G = () => `${graphBase()}/${graphVersion()}`;
 
 async function graph<T>(path: string, init?: RequestInit): Promise<{ ok: true; data: T } | { ok: false; error: string; code?: number }> {
   try {

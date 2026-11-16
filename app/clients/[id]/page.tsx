@@ -129,6 +129,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                   <span className="muted">{timeLabel(m.at)}</span>
                 </span>
                 {m.audioUrl ? <audio controls src={m.audioUrl} style={{ width: "100%" }} /> : <span style={{ fontSize: 15, lineHeight: "21px" }}>{m.text}</span>}
+                {m.direction === "out" && m.sentVia === "api" && m.sendError && <span className="send-note bad">{m.sendError}</span>}
+                {m.direction === "out" && m.sentVia === "manual" && (
+                  <span className="send-note bad">{m.sendError ?? `Copied for you to send in ${CHANNELS[m.channel].label}. GainsTalk didn't send this one.`}</span>
+                )}
+                {m.direction === "out" && m.sentVia === "demo" && <span className="send-note">Sample client, so nothing was sent.</span>}
               </span>
             </li>
           ))}

@@ -1,6 +1,7 @@
 import { readDB, writeDB } from "@/lib/store";
 import { findByHandle } from "@/lib/privacy";
 import { ingest } from "@/lib/ingest";
+import { explainMetaError } from "@/lib/send";
 import { verifyChallenge, verifyMetaSignature } from "@/lib/meta";
 import { uid } from "@/lib/util";
 import { SIGNATURE_HELP, describe, logHook, loggedChallenge, recordHook } from "@/lib/hooklog";
@@ -18,6 +19,8 @@ interface WaValue {
   messages?: { from: string; id: string; timestamp: string; type: string; text?: { body: string }; image?: { caption?: string } }[];
   /** Coexistence: messages the coach sent from the WhatsApp Business app on their phone. */
   message_echoes?: { to: string; id: string; timestamp: string; type: string; text?: { body: string } }[];
+  /** Delivery updates for messages we sent: sent, delivered, read or failed. */
+  statuses?: { id: string; status: string; errors?: { code?: number; message?: string; error_data?: { details?: string } }[] }[];
 }
 
 /**
@@ -53,6 +56,14 @@ export async function POST(req: Request) {
         });
         results.push(res);
         if (res.stored) stored++; // non-clients are dropped inside ingest, never stored
+      }
+
+      for (const st of v.statuses ?? []) {
+        if (st.status !== "failed") continue;
+        const sent = db.messages.find((m) => m.direction === "out" && m.externalId === st.id);
+        const why = explainMetaError("WhatsApp", st.errors?.[0] ?? {});
+        if (sent) sent.sendError = `Not delivered. ${why}`;
+        logHook(db, "whatsapp", false, `A reply wasn't delivered. ${why}`);
       }
 
       for (const echo of v.message_echoes ?? []) {

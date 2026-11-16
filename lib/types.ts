@@ -68,6 +68,9 @@ export interface Message {
   repliedWith?: string;
   /** Came from a Channels test button. Replies to it are never really sent. */
   demo?: boolean;
+  /** Outgoing only: how the reply left GainsTalk, and why the app couldn't send it. */
+  sentVia?: "api" | "manual" | "demo";
+  sendError?: string;
 }
 
 export interface CoachPromise {
@@ -122,6 +125,8 @@ export interface Settings {
   style: StyleSettings;
   forwardingLocalPart: string;
   ignoredCount: number;
+  /** IANA zone from the coach's browser, e.g. America/Chicago. */
+  timeZone?: string;
 }
 
 export interface DB {

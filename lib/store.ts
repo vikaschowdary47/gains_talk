@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { DB } from "./types";
 import { seedDB } from "./seed";
+import { setTimeZone } from "./util";
 
 /**
  * Data store with three backends, picked automatically:
@@ -63,6 +64,12 @@ function ensureDirs() {
 /* ---------- Database ---------- */
 
 export async function readDB(): Promise<DB> {
+  const db = await loadDB();
+  setTimeZone(db.settings.timeZone);
+  return db;
+}
+
+async function loadDB(): Promise<DB> {
   if (storageMode() === "redis") {
     const raw = await redis<string | null>(["GET", DB_KEY]);
     if (raw) return JSON.parse(raw) as DB;

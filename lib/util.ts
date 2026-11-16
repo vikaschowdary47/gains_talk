@@ -20,14 +20,25 @@ export function daysAgo(iso: string, now = Date.now()): number {
   return Math.floor((now - new Date(iso).getTime()) / 86_400_000);
 }
 
+/** The coach's time zone. The server runs in UTC, so times are shown in this zone. */
+let ZONE: string | undefined;
+export function setTimeZone(zone?: string) {
+  ZONE = zone || process.env.COACH_TIMEZONE || undefined;
+}
+const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: ZONE });
+
 export function timeLabel(iso: string, now = new Date()): string {
   const d = new Date(iso);
   const days = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
-  const sameDay = d.toDateString() === now.toDateString();
-  if (sameDay) return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (dayKey(d) === dayKey(now)) return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: ZONE });
   if (days < 2) return "Yesterday";
-  if (days < 7) return d.toLocaleDateString("en-US", { weekday: "short" });
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (days < 7) return d.toLocaleDateString("en-US", { weekday: "short", timeZone: ZONE });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: ZONE });
+}
+
+/** "Sunday, November 15" in the coach's time zone. */
+export function todayLabel(now = new Date()): string {
+  return now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: ZONE });
 }
 
 export function isoMinus(days: number, hours = 0): string {

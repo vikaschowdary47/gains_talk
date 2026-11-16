@@ -1,6 +1,9 @@
+import TimeZoneSync from "@/components/TimeZoneSync";
 import { readDB, storageMode } from "@/lib/store";
+import { timeLabel } from "@/lib/util";
 import { aiEnabled } from "@/lib/ai";
 import { instagramApiReady, messengerApiReady, whatsappApiReady } from "@/lib/send";
+import { twilioFrom, twilioReady } from "@/lib/twilio";
 import ChannelsClient, { type ChannelRow } from "./ChannelsClient";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +21,9 @@ export default async function ChannelsPage() {
       channel: "whatsapp",
       name: "WhatsApp Business",
       state: whatsappApiReady() ? "on" : process.env.WHATSAPP_VERIFY_TOKEN ? "partial" : "setup",
-      note: whatsappApiReady()
+      note: twilioReady()
+        ? `Testing through Twilio's WhatsApp Sandbox (${twilioFrom()}). Replies send straight from here. Only chats with your chosen clients are read.`
+        : whatsappApiReady()
         ? "Connected. Replies send straight from here. Only chats with your chosen clients are read."
         : "Keep chatting on your phone. Connect through Meta to import your last 6 months of chats. Until then, replies open WhatsApp ready to send.",
     },
@@ -65,11 +70,13 @@ export default async function ChannelsPage() {
   for (const r of rows) {
     if (r.channel !== "whatsapp" && r.channel !== "instagram" && r.channel !== "messenger") continue;
     const last = (db.webhookLog ?? []).find((e) => e.channel === r.channel);
-    if (last) r.lastHook = last;
+    if (last) r.lastHook = { ...last, when: timeLabel(last.at) };
     else if (r.state !== "setup") r.lastHook = null;
   }
 
   return (
+    <>
+    <TimeZoneSync saved={db.settings.timeZone} />
     <ChannelsClient
       rows={rows}
       clientCount={clientCount}
@@ -79,5 +86,6 @@ export default async function ChannelsPage() {
       ai={aiEnabled()}
       storage={storageMode()}
     />
+    </>
   );
 }

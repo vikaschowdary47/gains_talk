@@ -23,6 +23,11 @@ export function verifyChallenge(req: Request, token: string | undefined): Respon
   return new Response("Forbidden", { status: 403 });
 }
 
+/** Meta's Graph API address (META_GRAPH_BASE lets tests point at a stand-in). */
+export function graphBase(): string {
+  return process.env.META_GRAPH_BASE || "https://graph.facebook.com";
+}
+
 export function graphVersion(): string {
   return process.env.META_GRAPH_VERSION || "v25.0";
 }

@@ -1,7 +1,8 @@
+import TimeZoneSync from "@/components/TimeZoneSync";
 import { redirect } from "next/navigation";
 import { readDB } from "@/lib/store";
 import { lastInbound, needsReply, quietClients } from "@/lib/queries";
-import { timeLabel } from "@/lib/util";
+import { timeLabel, todayLabel } from "@/lib/util";
 import TodayClient from "./TodayClient";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +51,11 @@ export default async function TodayPage() {
 
   const pending = db.pending.map((p) => ({ id: p.id, name: p.name, channel: p.handle.channel, handle: p.handle.value, seen: timeLabel(p.firstSeen) }));
 
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const today = todayLabel();
 
   return (
+    <>
+    <TimeZoneSync saved={db.settings.timeZone} />
     <TodayClient
       coachName={db.settings.coachName}
       today={today}
@@ -64,5 +67,6 @@ export default async function TodayPage() {
       clients={db.contacts.filter((c) => c.isClient).map((c) => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name))}
       defaultAngle={db.settings.style.defaultAngle}
     />
+    </>
   );
 }
