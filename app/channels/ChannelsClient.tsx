@@ -54,13 +54,13 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
   };
 
   type Check = { label: string; ok: boolean; detail: string };
-  const [waCheck, setWaCheck] = useState<{ checks: Check[]; canFix: boolean } | null>(null);
+  const [waCheck, setWaCheck] = useState<{ channel: string; checks: Check[]; canFix: boolean } | null>(null);
   const [checking, setChecking] = useState(false);
-  const checkWhatsApp = async (fix = false) => {
+  const checkWhatsApp = async (fix = false, channel = "whatsapp") => {
     setChecking(true);
-    const res = await postJSON<{ checks: Check[]; canFix: boolean }>("/api/whatsapp/check", { fix });
+    const res = await postJSON<{ checks: Check[]; canFix: boolean }>(`/api/${channel}/check`, { fix });
     setChecking(false);
-    setWaCheck(res.error ? { checks: [{ label: "Check", ok: false, detail: res.error }], canFix: false } : res);
+    setWaCheck(res.error ? { channel, checks: [{ label: "Check", ok: false, detail: res.error }], canFix: false } : { channel, ...res });
   };
 
   const simulate = async (channel: Channel, label: string, newPerson = false) => {
@@ -135,13 +135,13 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                   {r.disconnect && (
                     <button type="button" className="btn btn-pill sm" onClick={() => disconnect(r.disconnect!)}>Disconnect</button>
                   )}
-                  {r.channel === "whatsapp" && r.state !== "setup" && (
-                    <button type="button" className="btn btn-pill sm" onClick={() => checkWhatsApp(false)} disabled={checking}>
+                  {(r.channel === "whatsapp" || r.channel === "instagram") && r.state !== "setup" && (
+                    <button type="button" className="btn btn-pill sm" onClick={() => checkWhatsApp(false, r.channel)} disabled={checking}>
                       {checking ? "Checking…" : "Check connection"}
                     </button>
                   )}
                 </span>
-                {r.channel === "whatsapp" && waCheck && (
+                {waCheck && waCheck.channel === r.channel && (
                   <div className="wa-check" role="status">
                     <ul>
                       {waCheck.checks.map((c, i) => (
@@ -152,8 +152,8 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                       ))}
                     </ul>
                     {waCheck.canFix && (
-                      <button type="button" className="btn btn-pill sm btn-primary" onClick={() => checkWhatsApp(true)} disabled={checking}>
-                        {checking ? "Linking…" : "Link this WhatsApp account"}
+                      <button type="button" className="btn btn-pill sm btn-primary" onClick={() => checkWhatsApp(true, r.channel)} disabled={checking}>
+                        {checking ? "Linking…" : r.channel === "instagram" ? "Send this account's DMs to GainsTalk" : "Link this WhatsApp account"}
                       </button>
                     )}
                   </div>
