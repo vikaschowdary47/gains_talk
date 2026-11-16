@@ -94,5 +94,10 @@ export function igToken(db?: DB): string | undefined {
 export function igApi(db?: DB): { base: string; account: string } {
   const c = db?.settings.instagram;
   if (c) return { base: G(), account: c.userId };
-  return { base: `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}`, account: "me" };
+  // A token generated in the App Dashboard: Instagram user tokens start with "IG" and use
+  // graph.instagram.com; business (system-user) tokens use graph.facebook.com and need the account ID.
+  const token = process.env.INSTAGRAM_TOKEN || "";
+  const account = process.env.INSTAGRAM_ACCOUNT_ID || "me";
+  if (token.startsWith("IG")) return { base: `${process.env.INSTAGRAM_GRAPH_BASE || "https://graph.instagram.com"}/${graphVersion()}`, account };
+  return { base: G(), account };
 }

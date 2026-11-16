@@ -38,10 +38,12 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
       state: ig ? "on" : instagramApiReady(db) && igVerify ? "on" : "setup",
       note: ig
         ? `Connected as ${ig.username ? `@${ig.username}` : "your professional account"}. DMs arrive here and replies send straight from here.`
+        : instagramApiReady(db)
+          ? "Connected with a token from your Meta app. DMs arrive here and replies send straight from here."
         : instagramLoginReady()
           ? "Connect your Instagram professional account (Business or Creator). DMs then arrive here, and replies send from here."
           : `DMs to your professional account. GainsTalk can't see ${instagramMissing().join(", ")} in Vercel yet. Add ${instagramMissing().length > 1 ? "them" : "it"} for Production and redeploy.`,
-      connect: !ig && instagramLoginReady() ? { href: "/api/instagram/connect", label: "Connect Instagram" } : undefined,
+      connect: !ig && !instagramApiReady(db) && instagramLoginReady() ? { href: "/api/instagram/connect", label: "Connect Instagram" } : undefined,
       disconnect: ig ? "instagram" : undefined,
     },
     {
