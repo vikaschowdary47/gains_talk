@@ -99,7 +99,7 @@ Recent conversation:
 ${lines.join("\n")}
 
 ${mode === "nudge"
-    ? `${contact.name.split(" ")[0]} has gone quiet for ${quietDays} days. Write a short, friendly check-in on ${CHANNELS[msg.channel].label} that makes it easy to reply. Mention their goal if it helps. No guilt trips.`
+    ? `${contact.name.split(" ")[0]} hasn't replied ${quietDays >= 2 ? `for ${quietDays} days` : "since your last message"}. Write a short, friendly check-in on ${CHANNELS[msg.channel].label} that makes it easy to reply. Mention their goal if it helps. No guilt trips.`
     : `Reply to this latest message from ${contact.name.split(" ")[0]} on ${CHANNELS[msg.channel].label}:\n"${msg.text}"`}`;
 
   try {
@@ -173,7 +173,7 @@ function demoNudge(contact: Contact, basedOn: string[], db: DB, days: number): D
   return {
     soft: enforceStyle(`Hey ${first}, haven't heard from you in a bit. No pressure at all, how's the week going?`, s),
     mid: enforceStyle(`Hey ${first}, checking in. How's everything going${goal ? ` with ${goal}` : ""}?`, s),
-    firm: enforceStyle(`${first}, it's been ${days} days. Send me a quick update today so we can keep things moving`, s),
+    firm: enforceStyle(days >= 2 ? `${first}, it's been ${days} days. Send me a quick update today so we can keep things moving` : `${first}, send me a quick update today so we can keep things moving`, s),
     talkingPoints: ["Haven't heard from you", "How's the week going", goal ? `Ask about ${goal}` : "Offer a quick call"],
     basedOn,
     source: "demo",
