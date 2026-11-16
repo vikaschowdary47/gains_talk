@@ -29,10 +29,26 @@ export async function POST(req: Request) {
     await recordHook("instagram", false, SIGNATURE_HELP);
     return new Response("Bad signature", { status: 401 });
   }
-  const payload = JSON.parse(raw || "{}") as { entry?: { messaging?: IgEvent[] }[] };
-  const ownIds = new Set((payload.entry ?? []).map((e) => (e as { id?: string }).id).filter(Boolean));
-  const events = (payload.entry ?? []).flatMap((e) => e.messaging ?? []).filter((ev) => ev.sender?.id && ev.message && !ev.message.is_echo && !ownIds.has(ev.sender.id));
-  if (events.length === 0) return Response.json({ ok: true, stored: 0 });
+  let payload: { entry?: { id?: string; messaging?: IgEvent[]; changes?: { field?: string; value?: IgEvent }[] }[] };
+  try {
+    payload = JSON.parse(raw || "{}");
+  } catch {
+    await recordHook("instagram", false, "Received something that wasn't JSON. Ignored.");
+    return Response.json({ ok: true, stored: 0 });
+  }
+  const entries = payload.entry ?? [];
+  const ownIds = new Set(entries.map((e) => e.id).filter(Boolean));
+  // Meta sends DMs as entry.messaging, but some setups (and the dashboard's Test button) use entry.changes.
+  const all: IgEvent[] = entries.flatMap((e) => [
+    ...(e.messaging ?? []),
+    ...(e.changes ?? []).filter((c) => c.field === "messages" && c.value).map((c) => c.value as IgEvent),
+  ]);
+  const echoes = all.filter((ev) => ev.message?.is_echo || (ev.sender?.id && ownIds.has(ev.sender.id))).length;
+  const events = all.filter((ev) => ev.sender?.id && ev.message && !ev.message.is_echo && !ownIds.has(ev.sender.id));
+  if (events.length === 0) {
+    await recordHook("instagram", true, echoes ? "Your own sent message came back from Meta. Ignored." : "Meta sent an update with no new message in it.");
+    return Response.json({ ok: true, stored: 0 });
+  }
 
   const db = await readDB();
   const token = igToken(db);
