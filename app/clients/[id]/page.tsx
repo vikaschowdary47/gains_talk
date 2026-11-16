@@ -6,6 +6,22 @@ import { CHANNELS } from "@/lib/channels";
 import { Icon, Rings } from "@/components/Icon";
 import { Avatar, ChannelChip, ChannelIcon, Sidebar } from "@/components/ui";
 import RemoveClient from "./RemoveClient";
+import { statSummary } from "@/lib/stats";
+import type { Stat } from "@/lib/types";
+
+/** A tiny trend line for a stat. */
+function Spark({ points }: { points: Stat[] }) {
+  if (points.length < 2) return null;
+  const vals = points.map((p) => p.value);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = max - min || 1;
+  const d = vals.map((v, i) => `${(i / (vals.length - 1)) * 100},${28 - ((v - min) / span) * 24}`).join(" ");
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ width: "100%", height: 34 }} aria-hidden="true">
+      <polyline points={d} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +37,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const promises = db.promises.filter((p) => p.clientId === c.id).sort((a, b) => Number(a.done) - Number(b.done));
   const channels = [...new Set([...c.handles.map((h) => h.channel), ...msgs.map((m) => m.channel)])];
   const recentIn = msgs.filter((m) => m.direction === "in").slice(0, 3);
+  const stats = statSummary(c.stats);
   const messageHref = waiting ? `/reply/${waiting.id}` : lastIn ? `/reply/${lastIn.id}?mode=nudge` : null;
 
   return (
@@ -76,6 +93,31 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </details>
         </section>
       )}
+
+      <section className="pad stack-sm" aria-labelledby="stats">
+        <h2 id="stats" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>Stats</h2>
+        {stats.length === 0 ? (
+          <p className="small muted" style={{ margin: "0 4px" }}>When {c.name.split(" ")[0]} mentions a number like their weight, steps or a lift, it&apos;s logged here automatically.</p>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+            {stats.map((st) => (
+              <div key={st.kind} className="card" style={{ gap: 4, borderRadius: 20, padding: 14 }}>
+                <span className="small muted" style={{ fontWeight: 600 }}>{st.label}</span>
+                <span className="display" style={{ fontSize: 24, fontWeight: 800 }}>
+                  {st.latest.value}<span style={{ fontSize: 14, fontWeight: 600, marginLeft: 3 }}>{st.latest.unit}</span>
+                </span>
+                {st.change !== null && st.change !== 0 && (
+                  <span className="small" style={{ fontWeight: 600 }}>
+                    {st.change > 0 ? "Up" : "Down"} {Math.abs(st.change)} {st.latest.unit} since {new Date(st.points[0].at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                )}
+                <Spark points={st.points} />
+                <span className="small muted">Last logged {timeLabel(st.latest.at)}{st.points.length > 1 ? `, ${st.points.length} entries` : ""}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {c.goals.length > 0 && (
         <section className="pad stack-sm" aria-labelledby="goals">

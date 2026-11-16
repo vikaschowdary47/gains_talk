@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { logPendingStats } from "@/lib/stats";
 import { readDB, writeDB } from "@/lib/store";
 import { addHandle, ingest } from "@/lib/ingest";
 import { lookupProfile, verifyChallenge, verifyMetaSignature } from "@/lib/meta";
@@ -78,5 +80,6 @@ export async function POST(req: Request) {
   }
   logHook(db, "instagram", true, describe(results));
   await writeDB(db);
+  if (stored) after(() => logPendingStats());
   return Response.json({ ok: true, stored });
 }

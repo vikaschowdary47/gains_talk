@@ -63,12 +63,6 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
     setWaCheck(res.error ? { channel, checks: [{ label: "Check", ok: false, detail: res.error }], canFix: false } : { channel, ...res });
   };
 
-  const simulate = async (channel: Channel, label: string, newPerson = false) => {
-    const res = await postJSON<{ stored?: boolean; client?: string; error?: string }>("/api/demo/simulate", { channel, newPerson });
-    if (res.error) return showToast(res.error);
-    showToast(newPerson ? "Someone new messaged you. See them on Today." : `Test ${label} message from ${res.client ?? "a client"} is on Today.`);
-    router.refresh();
-  };
 
   const reset = async () => {
     if (!window.confirm("Start over with the demo data? This clears everything you've added.")) return;
@@ -95,9 +89,6 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
           </span>
           <Icon name="chevron-right" size={16} stroke={2.4} />
         </Link>
-        <button type="button" className="btn btn-pill sm" style={{ alignSelf: "flex-start" }} onClick={() => simulate("whatsapp", "WhatsApp", true)}>
-          Test the privacy check: someone new messages you
-        </button>
 
         <ul className="list cards" style={{ gap: 10 }}>
           {p.rows.map((r) => (
@@ -129,9 +120,6 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                   {r.connect && (
                     <a href={r.connect.href} className="btn btn-pill sm btn-primary">{r.connect.label}</a>
                   )}
-                  <button type="button" className="btn btn-pill sm" onClick={() => simulate(r.channel, r.name)}>
-                    Send a test message
-                  </button>
                   {r.disconnect && (
                     <button type="button" className="btn btn-pill sm" onClick={() => disconnect(r.disconnect!)}>Disconnect</button>
                   )}
@@ -179,9 +167,6 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
             </button>
           </div>
           {!p.emailReady && <p className="small muted" style={{ margin: 0 }}>The inbound email hook isn&apos;t set up yet. See the README for the 5-minute setup.</p>}
-          <button type="button" className="btn btn-pill sm" style={{ alignSelf: "flex-start" }} onClick={() => simulate("email", "Email")}>
-            Send a test email
-          </button>
         </section>
 
         <section className="card" aria-labelledby="style-h" style={{ gap: 8 }}>

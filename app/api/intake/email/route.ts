@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { logPendingStats } from "@/lib/stats";
 import { readDB, updateDB, writeDB } from "@/lib/store";
 import { admit } from "@/lib/privacy";
 import { uid } from "@/lib/util";
@@ -77,6 +79,7 @@ export async function POST(req: Request) {
       status: "needs_reply",
     });
   });
+  after(() => logPendingStats());
   return Response.json({ ok: true, stored: true });
 }
 

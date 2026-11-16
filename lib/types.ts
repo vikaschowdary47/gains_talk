@@ -37,6 +37,19 @@ export interface Contact {
   since?: string;
   goals: Goal[];
   nextSession?: { when: string; topic: string };
+  /** Numbers the client reported in their messages (weight, steps, lifts...), oldest first. */
+  stats?: Stat[];
+}
+
+export interface Stat {
+  id: string;
+  /** Stable key for grouping, e.g. "weight", "body_fat", "steps", "squat". */
+  kind: string;
+  label: string;
+  value: number;
+  unit: string;
+  at: string;
+  sourceMessageId: string;
 }
 
 export type MessageStatus = "needs_reply" | "replied" | "skipped" | "info";
@@ -71,6 +84,8 @@ export interface Message {
   /** Outgoing only: how the reply left GainsTalk, and why the app couldn't send it. */
   sentVia?: "api" | "manual" | "demo";
   sendError?: string;
+  /** Incoming only: already scanned for stats like weight. */
+  statsChecked?: boolean;
 }
 
 export interface CoachPromise {
@@ -127,6 +142,8 @@ export interface Settings {
   ignoredCount: number;
   /** IANA zone from the coach's browser, e.g. America/Chicago. */
   timeZone?: string;
+  /** The demo clients and messages old databases started with have been removed. */
+  samplesCleared?: boolean;
   /** Which Meta server and account id answered for the pasted Instagram token (found by Check connection). */
   igRoute?: { base: string; account: string };
   /** The coach's connected Instagram professional account (Instagram Login). */

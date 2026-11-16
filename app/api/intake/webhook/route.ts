@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { logPendingStats } from "@/lib/stats";
 import crypto from "node:crypto";
 import { updateDB } from "@/lib/store";
 import { ingest } from "@/lib/ingest";
@@ -54,5 +56,6 @@ export async function POST(req: Request) {
       return r.stored ? { ok: true, stored: true, client: r.client.name } : { ok: true, stored: false, reason: r.reason };
     })
   );
+  after(() => logPendingStats());
   return Response.json({ ok: true, results });
 }

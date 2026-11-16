@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { logPendingStats } from "@/lib/stats";
 import { readDB, writeDB } from "@/lib/store";
 import { findByHandle } from "@/lib/privacy";
 import { ingest } from "@/lib/ingest";
@@ -88,5 +90,6 @@ export async function POST(req: Request) {
   // Delivery receipts (sent, read) come through here too; only log real messages.
   if (results.length || echoes) logHook(db, "whatsapp", true, describe(results, echoes));
   await writeDB(db);
+  if (stored) after(() => logPendingStats());
   return Response.json({ ok: true, stored });
 }

@@ -1,5 +1,8 @@
+import { after } from "next/server";
+import { logPendingStats } from "@/lib/stats";
 import { addHandle } from "@/lib/ingest";
-import { updateDB } from "@/lib/store";
+import { readDB, updateDB } from "@/lib/store";
+import { fetchIgHistory, igIdsOf, mergeIgHistory } from "@/lib/ig-history";
 import { isChannel } from "@/lib/channels";
 import { avatarFor, initialsOf, uid } from "@/lib/util";
 import type { Angle, Channel, StyleSettings } from "@/lib/types";
@@ -23,23 +26,33 @@ export async function POST(req: Request) {
     timeZone?: string;
   };
 
+  // People who just became clients: pull their recent Instagram messages afterwards.
+  const becameClients: string[] = [];
+
   const settings = await updateDB((db) => {
     if (body.apps) db.settings.apps = body.apps.filter(isChannel);
 
     if (body.clients) {
       for (const c of db.contacts) {
-        if (c.id in body.clients) c.isClient = Boolean(body.clients[c.id]);
+        if (c.id in body.clients) {
+          const now = Boolean(body.clients[c.id]);
+          if (now && !c.isClient) becameClients.push(c.id);
+          c.isClient = now;
+          if (now && !c.since) c.since = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        }
       }
     }
 
     if (body.addPending) {
       const p = db.pending.find((x) => x.id === body.addPending);
       if (p) {
+        const id = uid("c_");
         db.contacts.push({
-          id: uid("c_"), name: p.name, initials: initialsOf(p.name), avatar: avatarFor(p.name),
+          id, name: p.name, initials: initialsOf(p.name), avatar: avatarFor(p.name),
           handles: [p.handle], isClient: true, goals: [], since: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
         });
         db.pending = db.pending.filter((x) => x.id !== p.id);
+        becameClients.push(id);
       }
     }
 
@@ -57,6 +70,7 @@ export async function POST(req: Request) {
       if (p && client) {
         addHandle(client, p.handle.channel, p.handle.value);
         db.pending = db.pending.filter((x) => x.id !== p.id);
+        becameClients.push(client.id);
       }
     }
 
@@ -108,5 +122,19 @@ export async function POST(req: Request) {
     return db.settings;
   });
 
-  return Response.json({ ok: true, settings });
+  let imported = 0;
+  if (becameClients.length) {
+    const db = await readDB();
+    for (const cid of becameClients) {
+      const c = db.contacts.find((x) => x.id === cid);
+      if (!c) continue;
+      for (const igsid of igIdsOf(c.handles)) {
+        const past = await fetchIgHistory(db, igsid);
+        if (past.length) imported += await updateDB((fresh) => mergeIgHistory(fresh, cid, past));
+      }
+    }
+  }
+
+  if (becameClients.length) after(() => logPendingStats());
+  return Response.json({ ok: true, settings, imported });
 }

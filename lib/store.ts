@@ -2,7 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import type { DB } from "./types";
-import { seedDB } from "./seed";
+import { clearSampleData, seedDB } from "./seed";
 import { setTimeZone } from "./util";
 
 /**
@@ -65,6 +65,7 @@ function ensureDirs() {
 
 export async function readDB(): Promise<DB> {
   const db = await loadDB();
+  if (clearSampleData(db)) await writeDB(db);
   setTimeZone(db.settings.timeZone);
   return db;
 }

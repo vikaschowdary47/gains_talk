@@ -4,6 +4,7 @@ import type { Contact, DB, Drafts, Message, Win } from "./types";
 import { enforceStyle, styleRulesText } from "./style";
 import { CHANNELS } from "./channels";
 import { uid } from "./util";
+import { statsForPrompt } from "./stats";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 
@@ -90,6 +91,7 @@ All three replies must give the same advice. Only the tone changes.`;
   const user = `Client: ${contact.name}
 Goals: ${contact.goals.map((g) => g.title + (g.target ? ` (${g.target})` : "")).join("; ") || "none recorded"}
 Open promises from the coach: ${ctx.promises.map((p) => p.text).join("; ") || "none"}
+Stats they've reported: ${statsForPrompt(contact.stats) || "none yet"}
 ${contact.nextSession ? `Next session: ${contact.nextSession.when}, ${contact.nextSession.topic}` : ""}
 
 How this coach actually texts (match this voice):

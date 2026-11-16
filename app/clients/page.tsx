@@ -6,5 +6,8 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
   const db = await readDB();
-  return <ClientsClient rows={clientRows(db)} />;
+  const hidden = db.contacts
+    .filter((c) => !c.isClient)
+    .map((c) => ({ id: c.id, name: c.name, initials: c.initials, avatar: c.avatar, channel: c.handles[0]?.channel ?? "texts" }));
+  return <ClientsClient rows={clientRows(db)} hidden={hidden} />;
 }

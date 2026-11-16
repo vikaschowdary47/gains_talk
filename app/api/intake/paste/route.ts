@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { logPendingStats } from "@/lib/stats";
 import { readDB, updateDB } from "@/lib/store";
 import { extractFromScreenshot } from "@/lib/ai";
 import { isChannel } from "@/lib/channels";
@@ -81,5 +83,6 @@ export async function POST(req: Request) {
     return msgs;
   });
 
+  if (added.length) after(() => logPendingStats());
   return Response.json({ ok: true, added: added.length, needsReply: added.some((m) => m.status === "needs_reply") });
 }

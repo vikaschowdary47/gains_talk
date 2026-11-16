@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ClientRow, ClientStatus } from "@/lib/queries";
 import { Icon } from "@/components/Icon";
-import { Avatar, ChannelChip, TabBar } from "@/components/ui";
+import { Avatar, ChannelChip, TabBar, postJSON } from "@/components/ui";
+import type { Channel } from "@/lib/types";
+
+interface Hidden { id: string; name: string; initials: string; avatar: string; channel: Channel }
 
 const STATUS: Record<ClientStatus, { bg: string; ink: string }> = {
   replies: { bg: "var(--peri)", ink: "var(--ink)" },
@@ -14,7 +18,16 @@ const STATUS: Record<ClientStatus, { bg: string; ink: string }> = {
 
 type Filter = "all" | ClientStatus;
 
-export default function ClientsClient({ rows }: { rows: ClientRow[] }) {
+export default function ClientsClient({ rows, hidden }: { rows: ClientRow[]; hidden: Hidden[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  const makeClient = async (id: string) => {
+    setBusy(id);
+    await postJSON("/api/settings", { clients: { [id]: true } });
+    setBusy(null);
+    router.refresh();
+  };
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
   const count = (s: ClientStatus) => rows.filter((r) => r.status === s).length;
@@ -54,7 +67,9 @@ export default function ClientsClient({ rows }: { rows: ClientRow[] }) {
           })}
         </div>
 
-        {shown.length === 0 ? (
+        {rows.length === 0 ? (
+          <p className="lead center" style={{ marginTop: 24 }}>No clients yet. When someone new messages you, they show up on Today so you can add them.</p>
+        ) : shown.length === 0 ? (
           <p className="lead center" style={{ marginTop: 24 }}>No clients match that.</p>
         ) : (
           <ul className="list cards">
@@ -77,6 +92,33 @@ export default function ClientsClient({ rows }: { rows: ClientRow[] }) {
               </li>
             ))}
           </ul>
+        )}
+
+        {hidden.length > 0 && (
+          <section className="stack" style={{ gap: 8, marginTop: 8 }} aria-labelledby="hidden-h">
+            <button type="button" className="btn btn-pill sm" style={{ alignSelf: "flex-start" }} aria-expanded={showHidden} onClick={() => setShowHidden((v) => !v)}>
+              <span id="hidden-h">{showHidden ? "Hide" : "Show"} people you marked not a client ({hidden.length})</span>
+            </button>
+            {showHidden && (
+              <>
+                <p className="small muted" style={{ margin: "0 4px" }}>Their messages are dropped without being read. Add one as a client to start reading and drafting replies.</p>
+                <ul className="list cards">
+                  {hidden.map((h) => (
+                    <li key={h.id} className="list-item">
+                      <Avatar initials={h.initials} color="#E7E8EE" size={40} />
+                      <span className="grow" style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</span>
+                        <ChannelChip channel={h.channel} />
+                      </span>
+                      <button type="button" className="btn btn-pill sm btn-primary" disabled={busy === h.id} onClick={() => makeClient(h.id)}>
+                        {busy === h.id ? "Adding…" : "Add as client"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
         )}
       </div>
       <TabBar />
