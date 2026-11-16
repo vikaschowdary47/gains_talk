@@ -1,3 +1,4 @@
+import LiveRefresh from "@/components/LiveRefresh";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { readDB } from "@/lib/store";
@@ -42,6 +43,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
   return (
     <main className="app has-nav" style={{ paddingBottom: 48 }}>
+      <LiveRefresh />
       <Sidebar />
       <header className="hero" style={{ paddingBottom: c.nextSession ? 76 : 24 }}>
         <Rings color="#7BE0B8" />

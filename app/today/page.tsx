@@ -1,3 +1,4 @@
+import LiveRefresh from "@/components/LiveRefresh";
 import TimeZoneSync from "@/components/TimeZoneSync";
 import { redirect } from "next/navigation";
 import { readDB } from "@/lib/store";
@@ -56,6 +57,7 @@ export default async function TodayPage() {
   return (
     <>
     <TimeZoneSync saved={db.settings.timeZone} />
+    <LiveRefresh />
     <TodayClient
       coachName={db.settings.coachName}
       today={today}

@@ -1,3 +1,4 @@
+import LiveRefresh from "@/components/LiveRefresh";
 import { readDB } from "@/lib/store";
 import { clientRows } from "@/lib/queries";
 import ClientsClient from "./ClientsClient";
@@ -9,5 +10,10 @@ export default async function ClientsPage() {
   const hidden = db.contacts
     .filter((c) => !c.isClient)
     .map((c) => ({ id: c.id, name: c.name, initials: c.initials, avatar: c.avatar, channel: c.handles[0]?.channel ?? "texts" }));
-  return <ClientsClient rows={clientRows(db)} hidden={hidden} />;
+  return (
+    <>
+      <LiveRefresh />
+      <ClientsClient rows={clientRows(db)} hidden={hidden} />
+    </>
+  );
 }

@@ -6,6 +6,9 @@ import { lookupProfile, verifyChallenge, verifyMetaSignature } from "@/lib/meta"
 import { SIGNATURE_HELP, describe, logHook, loggedChallenge, recordHook } from "@/lib/hooklog";
 import type { IngestResult } from "@/lib/ingest";
 import { igApi, igToken } from "@/lib/instagram";
+import { findByHandle } from "@/lib/privacy";
+import { uid } from "@/lib/util";
+import type { DB } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +18,7 @@ export async function GET(req: Request) {
 
 interface IgEvent {
   sender?: { id: string };
+  recipient?: { id: string };
   timestamp?: number;
   message?: { mid?: string; text?: string; is_echo?: boolean; attachments?: { type?: string }[] };
 }
@@ -45,14 +49,21 @@ export async function POST(req: Request) {
     ...(e.messaging ?? []),
     ...(e.changes ?? []).filter((c) => c.field === "messages" && c.value).map((c) => c.value as IgEvent),
   ]);
-  const echoes = all.filter((ev) => ev.message?.is_echo || (ev.sender?.id && ownIds.has(ev.sender.id))).length;
+  const echoes = all.filter((ev) => ev.message && (ev.message.is_echo || (ev.sender?.id && ownIds.has(ev.sender.id))));
   const events = all.filter((ev) => ev.sender?.id && ev.message && !ev.message.is_echo && !ownIds.has(ev.sender.id));
-  if (events.length === 0) {
-    await recordHook("instagram", true, echoes ? "Your own sent message came back from Meta. Ignored." : "Meta sent an update with no new message in it.");
+  if (events.length === 0 && echoes.length === 0) {
+    await recordHook("instagram", true, "Meta sent an update with no new message in it.");
     return Response.json({ ok: true, stored: 0 });
   }
 
   const db = await readDB();
+  const savedEchoes = saveEchoes(db, echoes);
+  if (events.length === 0) {
+    logHook(db, "instagram", true, savedEchoes ? "Your reply from the Instagram app was saved to the client's timeline." : "Your own sent message came back from Meta. Nothing new to save.");
+    await writeDB(db);
+    return Response.json({ ok: true, stored: savedEchoes });
+  }
+
   const token = igToken(db);
   const base = igApi(db).base;
   const profiles = new Map<string, { name?: string; username?: string }>();
@@ -82,4 +93,34 @@ export async function POST(req: Request) {
   await writeDB(db);
   if (stored) after(() => logPendingStats());
   return Response.json({ ok: true, stored });
+}
+
+/**
+ * Messages the coach typed in the Instagram app come back as "echoes".
+ * Save the ones sent to clients so the timeline is complete, and mark the client as answered.
+ * Replies sent from GainsTalk are already saved (same message id), so they're skipped.
+ */
+function saveEchoes(db: DB, echoes: IgEvent[]): number {
+  const known = new Set(db.messages.map((m) => m.externalId).filter(Boolean));
+  let saved = 0;
+  for (const ev of echoes) {
+    const mid = ev.message?.mid;
+    const to = ev.recipient?.id;
+    if (!mid || !to || known.has(mid)) continue;
+    const client = findByHandle(db, "instagram", to);
+    if (!client?.isClient) continue; // never store chats with non-clients
+    const text = ev.message!.text ?? (ev.message!.attachments?.length ? `[${ev.message!.attachments[0].type ?? "attachment"}]` : "");
+    if (!text) continue;
+    const at = ev.timestamp ? new Date(ev.timestamp).toISOString() : new Date().toISOString();
+    db.messages.push({ id: uid("out_"), clientId: client.id, channel: "instagram", direction: "out", text, at, status: "replied", externalId: mid });
+    for (const m of db.messages) {
+      if (m.clientId === client.id && m.status === "needs_reply" && m.at <= at) {
+        m.status = "replied";
+        m.repliedWith = text;
+      }
+    }
+    known.add(mid);
+    saved++;
+  }
+  return saved;
 }
