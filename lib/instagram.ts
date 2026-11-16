@@ -10,8 +10,15 @@ import { graphBase, graphVersion } from "./meta";
  * INSTAGRAM_CONFIG_ID (the Unified login configuration), and the redirect URL
  * below registered on that configuration.
  */
+const IG_SETTINGS = ["META_APP_ID", "META_APP_SECRET", "INSTAGRAM_CONFIG_ID"] as const;
+
+/** Settings the server can't see (names only, never values). */
+export function instagramMissing(): string[] {
+  return IG_SETTINGS.filter((k) => !process.env[k]?.trim());
+}
+
 export function instagramLoginReady(): boolean {
-  return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET && process.env.INSTAGRAM_CONFIG_ID);
+  return instagramMissing().length === 0;
 }
 
 export function igRedirectUri(): string {

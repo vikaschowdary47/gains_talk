@@ -3,7 +3,7 @@ import { readDB, storageMode } from "@/lib/store";
 import { timeLabel } from "@/lib/util";
 import { aiEnabled } from "@/lib/ai";
 import { instagramApiReady, messengerApiReady, whatsappApiReady } from "@/lib/send";
-import { instagramLoginReady } from "@/lib/instagram";
+import { instagramLoginReady, instagramMissing } from "@/lib/instagram";
 import ChannelsClient, { type ChannelRow } from "./ChannelsClient";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
   const igNotice =
     sp.ig === "connected" ? `Instagram connected${ig?.username ? ` as @${ig.username}` : ""}.`
     : sp.ig === "error" ? `Instagram didn't connect. ${typeof sp.reason === "string" ? sp.reason : ""}`.trim()
-    : sp.ig === "setup" ? "Add META_APP_ID, META_APP_SECRET and INSTAGRAM_CONFIG_ID in Vercel first, then redeploy."
+    : sp.ig === "setup" ? `Add ${instagramMissing().join(", ")} in Vercel first, then redeploy.`
     : undefined;
   const clientCount = db.contacts.filter((c) => c.isClient).length;
   const domain = process.env.INBOUND_EMAIL_DOMAIN || "in.gainstalk.com";
@@ -40,7 +40,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
         ? `Connected as ${ig.username ? `@${ig.username}` : "your professional account"}. DMs arrive here and replies send straight from here.`
         : instagramLoginReady()
           ? "Connect your Instagram professional account (Business or Creator). DMs then arrive here, and replies send from here."
-          : "DMs to your professional account. Add META_APP_ID, META_APP_SECRET and INSTAGRAM_CONFIG_ID in Vercel to connect it. Until then, paste or share messages in.",
+          : `DMs to your professional account. GainsTalk can't see ${instagramMissing().join(", ")} in Vercel yet. Add ${instagramMissing().length > 1 ? "them" : "it"} for Production and redeploy.`,
       connect: !ig && instagramLoginReady() ? { href: "/api/instagram/connect", label: "Connect Instagram" } : undefined,
       disconnect: ig ? "instagram" : undefined,
     },
