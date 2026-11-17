@@ -1,5 +1,5 @@
 import type { CoachPromise, DB, Message } from "./types";
-import { uid } from "./util";
+import { uid, firstName } from "./util";
 
 const PROMISE_RE = /\b(?:i'?ll|i will|let me|gonna|going to)\s+(?:\w+\s+){0,3}?(send|share|get you|put together|make you|write|email|look into|check)\b([^.!?,]*)/i;
 const DAY = "(?:mon|tues|wednes|thurs|fri|satur|sun)day";
@@ -15,7 +15,7 @@ export function detectPromise(db: DB, msg: Message): CoachPromise | null {
   const match = msg.text.match(PROMISE_RE);
   if (!match) return null;
   const contact = db.contacts.find((c) => c.id === msg.clientId);
-  const first = contact?.name.split(" ")[0] ?? "client";
+  const first = contact ? firstName(contact.name) : "client";
 
   // The part right after "send/share/...", minus any deadline words.
   const rest = match[2].replace(BY_RE, "").replace(ANY_RE, "").replace(/\s+/g, " ").trim();

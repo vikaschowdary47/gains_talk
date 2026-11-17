@@ -42,6 +42,7 @@ export interface ClientRow {
   when: string;
   channel: string;
   channelKey: keyof typeof CHANNELS;
+  demo?: boolean;
 }
 
 export function clientRows(db: DB): ClientRow[] {
@@ -61,6 +62,7 @@ export function clientRows(db: DB): ClientRow[] {
       when: last ? timeLabel(last.at) : "",
       channel: CHANNELS[channelKey].label,
       channelKey,
+      demo: c.demo,
     };
   });
 }

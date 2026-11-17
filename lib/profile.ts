@@ -2,7 +2,7 @@ import "server-only";
 import type { CoachPromise, Goal } from "./types";
 import { readDB, updateDB } from "./store";
 import { aiEnabled, askClaude, parseJSON } from "./ai";
-import { uid } from "./util";
+import { uid, firstName } from "./util";
 
 interface Learned {
   summary?: string;
@@ -26,20 +26,23 @@ export async function buildProfile(clientId: string): Promise<boolean> {
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(-60);
   if (msgs.length < 2) return false;
-  const first = c.name.split(" ")[0];
+  const first = firstName(c.name);
   const transcript = msgs.map((m) => `[${m.at.slice(0, 10)}] ${m.direction === "in" ? first : "Coach"}: ${m.text}`).join("\n");
 
   let learned: Learned | null = null;
   try {
     const raw = await askClaude(
-      `You help a fitness coach keep notes on a client. Read their chat and write what the coach should remember.
-Use plain, everyday English. Only include things actually said in the chat. Never guess or diagnose.
+      `You help a fitness coach keep notes on a client. Read their chat and write only what helps the coach coach them.
+Useful: goals and deadlines, body numbers, training schedule, injuries or pain, food habits and preferences, work or life things that affect training, how they like to be coached.
+Never write about the chat itself: not their name, not how short or long their messages are, not what was said when, not that little is known. No meta commentary.
+Only include things actually said. Never guess or diagnose. Plain, everyday English.
+If the chat has nothing useful (just greetings or "ok"), return {"summary":"","goals":[],"facts":[],"promises":[]}.
 Return only JSON:
-{"summary":"Two short sentences: who they are as a client and where things stand now.",
+{"summary":"One or two short sentences about the client as a person: what they're working toward and how it's going.",
 "goals":[{"title":"Lose weight for wedding","target":"15 lb by June"}],
 "facts":["Bad left knee, avoids deep squats","Trains mornings before work","Vegetarian"],
 "promises":[{"text":"Send a new meal plan","due":"Friday"}]}
-promises = things the COACH said they would do and hasn't clearly done yet. Keep each fact under 12 words. Up to 3 goals, 8 facts, 4 promises.`,
+promises = specific things the COACH said they would do and hasn't clearly done yet (not vague "I'll get back to you"). Keep each fact under 12 words. Up to 3 goals, 8 facts, 4 promises.`,
       `Client: ${c.name}\n\n${transcript}`,
       700,
     );

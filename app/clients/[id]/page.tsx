@@ -2,7 +2,7 @@ import LiveRefresh from "@/components/LiveRefresh";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { readDB } from "@/lib/store";
-import { timeLabel } from "@/lib/util";
+import { timeLabel, firstName } from "@/lib/util";
 import { CHANNELS } from "@/lib/channels";
 import { Icon, Rings } from "@/components/Icon";
 import { Avatar, ChannelChip, ChannelIcon, Sidebar } from "@/components/ui";
@@ -65,8 +65,18 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const channels = [...new Set([...c.handles.map((h) => h.channel), ...msgs.map((m) => m.channel)])];
   const recentIn = msgs.filter((m) => m.direction === "in").slice(0, 3);
   const stats = statSummary(c.stats);
+  const thread = msgs.slice(0, 20).reverse(); // oldest first, like a chat
+  const tz = db.settings.timeZone || "America/Chicago";
+  const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: tz });
+  const dayLabel = (iso: string) => {
+    const d = new Date(iso);
+    if (dayKey(d) === dayKey(new Date())) return "Today";
+    if (dayKey(d) === dayKey(new Date(Date.now() - 86_400_000))) return "Yesterday";
+    return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: tz });
+  };
+  const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
   const g = clientGlance(db, c);
-  const first = c.name.split(" ")[0];
+  const first = firstName(c.name);
   const hasInstagram = igIdsOf(c.handles).length > 0;
   const brief = currentBrief(db, c);
   const badge = { "check-in": ["Needs a check-in", "#FFF3D6", "#5A3E00"], "on-track": ["On track", "#DDF4E8", "#15603C"], steady: ["Steady", "#E7E8F1", "#2E3352"], new: ["Getting started", "#E7E8F1", "#2E3352"] }[brief.status];
@@ -174,7 +184,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             </>
           ) : (
             <p style={{ margin: 0, fontSize: 15, lineHeight: "22px", color: "var(--muted)" }}>
-              Nothing here yet. GainsTalk can read {first}&apos;s messages and note their goals, injuries, schedule and preferences.
+              {c.about ? `Not enough to go on yet. Once ${first} talks about goals, training, food or how their week is going, notes will appear here.` : `Nothing here yet. GainsTalk can read ${first}'s messages and note their goals, injuries, schedule and preferences.`}
             </p>
           )}
           <CatchUp id={c.id} hasInstagram={hasInstagram} />
@@ -278,26 +288,37 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <div className="col">
       <section className="pad stack-sm" aria-labelledby="activity">
-        <h2 id="activity" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>Recent messages</h2>
-        <ul className="list">
-          {msgs.slice(0, 12).map((m) => (
-            <li key={m.id} className="list-item" style={{ alignItems: "flex-start" }}>
-              <ChannelIcon channel={m.channel} size={34} />
-              <span className="grow" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <span className="row small" style={{ justifyContent: "space-between", gap: 8 }}>
-                  <span style={{ fontWeight: 700 }}>{m.direction === "in" ? c.name.split(" ")[0] : "You"} on {CHANNELS[m.channel].label}</span>
-                  <span className="muted">{timeLabel(m.at)}</span>
-                </span>
-                {m.audioUrl ? <audio controls src={m.audioUrl} style={{ width: "100%" }} /> : <span style={{ fontSize: 15, lineHeight: "21px" }}>{m.text}</span>}
-                {m.direction === "out" && m.sentVia === "api" && m.sendError && <span className="send-note bad">{m.sendError}</span>}
-                {m.direction === "out" && m.sentVia === "manual" && (
-                  <span className="send-note bad">{m.sendError ?? `Copied for you to send in ${CHANNELS[m.channel].label}. GainsTalk didn't send this one.`}</span>
-                )}
-                {m.direction === "out" && m.sentVia === "demo" && <span className="send-note">Sample client, so nothing was sent.</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <h2 id="activity" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>Conversation</h2>
+        {thread.length === 0 ? (
+          <p className="small muted" style={{ margin: "0 4px" }}>No messages yet.</p>
+        ) : (
+          <div className="card" style={{ gap: 6, borderRadius: 20, padding: "14px 12px" }}>
+            {msgs.length > thread.length && <p className="small muted center" style={{ margin: "0 0 4px" }}>Showing the last {thread.length} of {msgs.length} messages</p>}
+            {thread.map((m, i) => {
+              const day = dayLabel(m.at);
+              const showDay = i === 0 || dayLabel(thread[i - 1].at) !== day;
+              const mine = m.direction === "out";
+              return (
+                <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {showDay && <p className="small muted center" style={{ margin: "10px 0 4px", fontWeight: 600 }}>{day}</p>}
+                  <div style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
+                    <div style={{ maxWidth: "82%", display: "flex", flexDirection: "column", alignItems: mine ? "flex-end" : "flex-start", gap: 3 }}>
+                      <div style={{ background: mine ? "var(--primary)" : "#EEEFF5", color: mine ? "#fff" : "var(--ink)", padding: "9px 13px", borderRadius: 18, borderBottomRightRadius: mine ? 6 : 18, borderBottomLeftRadius: mine ? 18 : 6, fontSize: 15, lineHeight: "21px", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                        {m.audioUrl ? <audio controls src={m.audioUrl} style={{ width: 220 }} /> : m.text}
+                      </div>
+                      <span className="small muted" style={{ fontSize: 12 }}>
+                        {mine ? "You" : first}, {clock(m.at)}{m.channel !== "instagram" || c.handles.some((h) => h.channel !== "instagram") ? ` on ${CHANNELS[m.channel].label}` : ""}
+                      </span>
+                      {mine && m.sentVia === "api" && m.sendError && <span className="send-note bad">{m.sendError}</span>}
+                      {mine && m.sentVia === "manual" && <span className="send-note bad">{m.sendError ?? `Copied for you to send in ${CHANNELS[m.channel].label}. GainsTalk didn't send this one.`}</span>}
+                      {mine && m.sentVia === "demo" && <span className="send-note">Demo client, so nothing was sent.</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
       <section className="pad" aria-label="Remove client">
         <RemoveClient id={c.id} name={c.name} />

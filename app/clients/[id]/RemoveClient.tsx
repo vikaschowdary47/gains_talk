@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { postJSON } from "@/components/ui";
+import { firstName } from "@/lib/util";
 
 /** Remove a client and delete everything GainsTalk keeps about them. */
 export default function RemoveClient({ id, name }: { id: string; name: string }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const first = name.split(" ")[0];
+  const first = firstName(name);
 
   const remove = async () => {
     setBusy(true);

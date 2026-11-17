@@ -1,5 +1,6 @@
 "use client";
 
+import { firstName } from "@/lib/util";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -111,7 +112,7 @@ export default function TodayClient(props: {
     } else if (res.via === "demo") {
       showToast(`Sample client, so nothing was sent. Marked as replied.`);
     } else {
-      showToast(`Sent to ${current.client.name.split(" ")[0]}`);
+      showToast(`Sent to ${firstName(current.client.name)}`);
     }
     if (res.promise) setTimeout(() => showToast(`Added to promises: ${res.promise!.text}`), 1600);
     advance();

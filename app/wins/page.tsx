@@ -1,3 +1,4 @@
+import { firstName } from "@/lib/util";
 import { readDB } from "@/lib/store";
 import { aiEnabled } from "@/lib/ai";
 import WinsClient from "./WinsClient";
@@ -17,8 +18,8 @@ export default async function WinsPage() {
       note: w.note ?? null,
       count: w.count ?? null,
       permission: w.permission,
-      clientFirst: c?.name.split(" ")[0] ?? null,
-      shownName: c ? `${c.name.split(" ")[0]} ${c.name.split(" ").slice(-1)[0][0]}.` : null,
+      clientFirst: c ? firstName(c.name) : null,
+      shownName: c ? `${firstName(c.name)} ${c.name.split(" ").slice(-1)[0][0]}.` : null,
       hiddenName: c ? `Client${c.since ? `, since ${c.since}` : ""}` : null,
       channel: src?.channel ?? null,
     };

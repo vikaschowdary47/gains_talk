@@ -22,6 +22,13 @@ export default function ClientsClient({ rows, hidden }: { rows: ClientRow[]; hid
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const demo = async (method: "POST" | "DELETE") => {
+    setBusy("demo");
+    const res = await fetch("/api/demo/client", { method }).then((r) => r.json()).catch(() => null);
+    setBusy(null);
+    if (method === "POST" && res?.id) router.push(`/clients/${res.id}`);
+    else router.refresh();
+  };
   const makeClient = async (id: string) => {
     setBusy(id);
     await postJSON("/api/settings", { clients: { [id]: true } });
@@ -49,10 +56,10 @@ export default function ClientsClient({ rows, hidden }: { rows: ClientRow[]; hid
           </Link>
         </header>
 
-        <div className="row" style={{ gap: 8, flexWrap: "wrap", padding: "0 4px" }}>
-          <Link href="/import/instagram" className="btn btn-pill sm btn-white">Add clients from Instagram</Link>
-          <Link href="/import/whatsapp" className="btn btn-pill sm btn-white">Add clients from WhatsApp</Link>
-          <Link href="/leads" className="btn btn-pill sm btn-white">Coach sign-ups</Link>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap", padding: "0 4px", alignItems: "center" }}>
+          <span className="small muted" style={{ fontWeight: 600 }}>Add clients:</span>
+          <Link href="/import/instagram" className="btn btn-pill sm btn-white">From Instagram</Link>
+          <Link href="/import/whatsapp" className="btn btn-pill sm btn-white">From WhatsApp</Link>
         </div>
 
         <label className="search">
@@ -74,7 +81,7 @@ export default function ClientsClient({ rows, hidden }: { rows: ClientRow[]; hid
         </div>
 
         {rows.length === 0 ? (
-          <p className="lead center" style={{ marginTop: 24 }}>No clients yet. When someone new messages you, they show up on Today so you can add them.</p>
+          <p className="lead center" style={{ marginTop: 24 }}>No clients yet. Add them from Instagram or WhatsApp above, or try a demo client to see how it works.</p>
         ) : shown.length === 0 ? (
           <p className="lead center" style={{ marginTop: 24 }}>No clients match that.</p>
         ) : (
@@ -99,6 +106,16 @@ export default function ClientsClient({ rows, hidden }: { rows: ClientRow[]; hid
             ))}
           </ul>
         )}
+
+
+        <div className="row" style={{ gap: 16, flexWrap: "wrap", justifyContent: "center", padding: "8px 4px" }}>
+          {rows.some((r) => r.demo) ? (
+            <button type="button" className="link-btn" disabled={busy === "demo"} onClick={() => demo("DELETE")} style={{ background: "none", border: 0, color: "var(--primary)", fontWeight: 600, fontSize: 15, cursor: "pointer", minHeight: 44 }}>{busy === "demo" ? "Removing…" : "Remove demo client"}</button>
+          ) : (
+            <button type="button" className="link-btn" disabled={busy === "demo"} onClick={() => demo("POST")} style={{ background: "none", border: 0, color: "var(--primary)", fontWeight: 600, fontSize: 15, cursor: "pointer", minHeight: 44 }}>{busy === "demo" ? "Adding…" : "Try a demo client"}</button>
+          )}
+          <Link href="/leads" style={{ fontWeight: 600, fontSize: 15, display: "inline-flex", alignItems: "center", minHeight: 44 }}>Coach sign-ups</Link>
+        </div>
 
         {hidden.length > 0 && (
           <section className="stack" style={{ gap: 8, marginTop: 8 }} aria-labelledby="hidden-h">

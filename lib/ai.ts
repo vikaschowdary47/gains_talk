@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { Contact, DB, Drafts, Message, Win } from "./types";
 import { enforceStyle, styleRulesText } from "./style";
 import { CHANNELS } from "./channels";
-import { uid } from "./util";
+import { uid, firstName } from "./util";
 import { statsForPrompt } from "./stats";
 import { explainAiError, recordAiStatus } from "./ai-status";
 
@@ -96,7 +96,7 @@ Return only JSON with this shape:
 All three replies must give the same advice. Only the tone changes.`;
 
   const lines = ctx.thread.map(
-    (m) => `${m.direction === "in" ? contact.name.split(" ")[0] : "Coach"} (${CHANNELS[m.channel].label}, ${m.at.slice(0, 10)}): ${m.text}`
+    (m) => `${m.direction === "in" ? firstName(contact.name) : "Coach"} (${CHANNELS[m.channel].label}, ${m.at.slice(0, 10)}): ${m.text}`
   );
   const user = `Client: ${contact.name}
 Goals: ${contact.goals.map((g) => g.title + (g.target ? ` (${g.target})` : "")).join("; ") || "none recorded"}
@@ -111,8 +111,8 @@ Recent conversation:
 ${lines.join("\n")}
 
 ${mode === "nudge"
-    ? `${contact.name.split(" ")[0]} hasn't replied ${quietDays >= 2 ? `for ${quietDays} days` : "since your last message"}. Write a short, friendly check-in on ${CHANNELS[msg.channel].label} that makes it easy to reply. Mention their goal if it helps. No guilt trips.`
-    : `Reply to this latest message from ${contact.name.split(" ")[0]} on ${CHANNELS[msg.channel].label}:\n"${msg.text}"`}`;
+    ? `${firstName(contact.name)} hasn't replied ${quietDays >= 2 ? `for ${quietDays} days` : "since your last message"}. Write a short, friendly check-in on ${CHANNELS[msg.channel].label} that makes it easy to reply. Mention their goal if it helps. No guilt trips.`
+    : `Reply to this latest message from ${firstName(contact.name)} on ${CHANNELS[msg.channel].label}:\n"${msg.text}"`}`;
 
   try {
     const raw = await ask(system, user);
@@ -134,7 +134,7 @@ ${mode === "nudge"
 
 /** Hand-written drafts for the demo data, plus a generic fallback. */
 function demoDrafts(msg: Message, contact: Contact, basedOn: string[], db: DB): Drafts {
-  const first = contact.name.split(" ")[0];
+  const first = firstName(contact.name);
   const known: Record<string, Omit<Drafts, "basedOn" | "source">> = {
     m3: {
       soft: "No stress, heavy legs happen. Don't make it up. Easy 5k Thursday instead of the tempo and we'll do the long run Sunday. How's sleep been?",
@@ -179,7 +179,7 @@ function demoDrafts(msg: Message, contact: Contact, basedOn: string[], db: DB): 
 }
 
 function demoNudge(contact: Contact, basedOn: string[], db: DB, days: number): Drafts {
-  const first = contact.name.split(" ")[0];
+  const first = firstName(contact.name);
   const goal = contact.goals[0]?.title.toLowerCase();
   const s = db.settings.style;
   return {

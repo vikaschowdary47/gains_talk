@@ -112,6 +112,15 @@ function saveEchoes(db: DB, echoes: IgEvent[]): number {
     const text = ev.message!.text ?? (ev.message!.attachments?.length ? `[${ev.message!.attachments[0].type ?? "attachment"}]` : "");
     if (!text) continue;
     const at = ev.timestamp ? new Date(ev.timestamp).toISOString() : new Date().toISOString();
+    // A reply sent from GainsTalk comes back as an echo too; skip it if the same text went out in the last 10 minutes.
+    const sentHere = db.messages.find(
+      (m) => m.clientId === client.id && m.direction === "out" && m.text.trim() === text.trim() && Math.abs(Date.parse(m.at) - Date.parse(at)) < 10 * 60_000,
+    );
+    if (sentHere) {
+      sentHere.externalId ??= mid;
+      known.add(mid);
+      continue;
+    }
     db.messages.push({ id: uid("out_"), clientId: client.id, channel: "instagram", direction: "out", text, at, status: "replied", externalId: mid });
     for (const m of db.messages) {
       if (m.clientId === client.id && m.status === "needs_reply" && m.at <= at) {

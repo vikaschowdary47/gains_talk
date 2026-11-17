@@ -33,8 +33,8 @@ export function seedDB(): DB {
 const SAMPLE_IDS = new Set(["maya", "jordan", "priya", "owen", "chris", "elena", "sofia", "mom", "sam"]);
 const SAMPLE_MESSAGE = /^m\d+$/;
 const SAMPLE_EXTRAS = new Set(["p1", "w1", "w2", "w3"]);
-export function isSampleContact(c: { id: string }): boolean {
-  return SAMPLE_IDS.has(c.id);
+export function isSampleContact(c: { id: string; demo?: boolean }): boolean {
+  return SAMPLE_IDS.has(c.id) || Boolean(c.demo);
 }
 
 /**
@@ -69,5 +69,21 @@ export function clearSampleData(db: DB): boolean {
   if (db.settings.coachName === "Alex") db.settings.coachName = process.env.COACH_NAME || "Coach";
   db.settings.ignoredCount = 0;
   db.settings.samplesCleared = true;
+  return true;
+}
+
+/** One-time cleanup: replies saved twice (sent from GainsTalk, then echoed back by Instagram). */
+export function removeDuplicateReplies(db: DB): boolean {
+  if (db.settings.dedupedReplies) return false;
+  const kept: DB["messages"] = [];
+  const sorted = [...db.messages].sort((a, b) => a.at.localeCompare(b.at));
+  for (const m of sorted) {
+    const dup = m.direction === "out" && kept.some(
+      (k) => k.clientId === m.clientId && k.direction === "out" && k.text.trim() === m.text.trim() && Math.abs(Date.parse(k.at) - Date.parse(m.at)) < 10 * 60_000,
+    );
+    if (!dup) kept.push(m);
+  }
+  db.messages = kept;
+  db.settings.dedupedReplies = true;
   return true;
 }

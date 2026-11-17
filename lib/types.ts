@@ -43,6 +43,8 @@ export interface Contact {
   about?: { summary: string; facts: string[]; updatedAt: string };
   /** The coach brief: computed signals plus short wording, saved until the data changes. */
   brief?: Brief;
+  /** A made-up client added with "Try a demo client". Replies to them are never sent. */
+  demo?: boolean;
 }
 
 export interface Signal {
@@ -169,6 +171,7 @@ export interface Settings {
   timeZone?: string;
   /** The demo clients and messages old databases started with have been removed. */
   samplesCleared?: boolean;
+  dedupedReplies?: boolean;
   /** Whether the last Claude call worked, in plain English. */
   aiStatus?: { ok: boolean; at: string; detail: string };
   /** Which Meta server and account id answered for the pasted Instagram token (found by Check connection). */

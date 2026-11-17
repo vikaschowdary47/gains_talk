@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { DB, Stat } from "./types";
 import { readDB, updateDB } from "./store";
 import { aiEnabled } from "./ai";
-import { uid } from "./util";
+import { uid, firstName } from "./util";
 import { explainAiError, recordAiStatus } from "./ai-status";
 
 const MODEL = process.env.ANTHROPIC_STATS_MODEL || "claude-haiku-5-5";
@@ -60,7 +60,7 @@ export async function logPendingStats(limit = 25): Promise<number> {
   for (const m of todo) {
     if (!HAS_NUMBER.test(m.text)) continue;
     try {
-      found.set(m.id, aiEnabled() ? await aiStats(m.text, clients.get(m.clientId)!.name.split(" ")[0]) : quickWeight(m.text));
+      found.set(m.id, aiEnabled() ? await aiStats(m.text, firstName(clients.get(m.clientId)!.name)) : quickWeight(m.text));
     } catch (e) {
       console.error("[stats]", e);
       await recordAiStatus(false, explainAiError(e));

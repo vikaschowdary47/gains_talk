@@ -1,5 +1,6 @@
 "use client";
 
+import { firstName } from "@/lib/util";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -26,7 +27,7 @@ interface Props {
 
 export default function ReplyClient(p: Props) {
   const router = useRouter();
-  const first = p.client.name.split(" ")[0];
+  const first = firstName(p.client.name);
   const [drafts, setDrafts] = useState<Drafts | null>(null);
   const [angle, setAngle] = useState<Angle>(p.defaultAngle);
   const [edits, setEdits] = useState<Partial<Record<Angle, string>>>({});

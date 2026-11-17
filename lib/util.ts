@@ -2,6 +2,14 @@ export function uid(prefix = ""): string {
   return prefix + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 }
 
+/** What to call someone in a sentence: a person's first name, or the whole name for a brand or handle ("No More Average", "@fitwithjo"). */
+export function firstName(name: string): string {
+  const n = name.trim().replace(/\s*\(demo\)$/i, "");
+  const parts = n.split(/\s+/);
+  if (n.startsWith("@") || parts.length >= 3 || parts[0].length <= 2) return n;
+  return parts[0];
+}
+
 export function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";

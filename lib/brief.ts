@@ -1,3 +1,4 @@
+import { firstName } from "./util";
 import "server-only";
 import type { Brief, Contact, DB, Signal, Stat } from "./types";
 export type { Brief, Signal } from "./types";
@@ -144,7 +145,7 @@ export function quickBrief(db: DB, c: Contact): Brief {
   const status = statusOf(signals, messages);
   return {
     status,
-    text: ruleText(c.name.split(" ")[0], signals, status),
+    text: ruleText(firstName(c.name), signals, status),
     signals,
     quotes: evidence(db, c, signals),
     basis: { messages, numbers: c.stats?.length ?? 0 },
@@ -181,7 +182,7 @@ export async function refreshBrief(clientId: string, force = false): Promise<boo
   let brief = base;
   if (aiEnabled() && base.status !== "new") {
     try {
-      const first = c.name.split(" ")[0];
+      const first = firstName(c.name);
       const facts = base.signals.map((s) => `- ${s.label}: ${s.value} (${s.detail})${s.level === "warn" ? " [needs attention]" : s.level === "good" ? " [good]" : ""}`).join("\n");
       const quotes = base.quotes.map((q) => `- "${q.text}"`).join("\n");
       const text = await askClaude(
