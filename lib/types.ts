@@ -187,6 +187,8 @@ export interface DB {
   pending: PendingContact[];
   /** Latest webhook calls from Meta, newest first. No message text. */
   webhookLog?: HookEvent[];
+  /** Coaches who asked for early access on gainstalk.com/coaches. */
+  leads?: Lead[];
 }
 
 export interface HookEvent {
@@ -194,4 +196,13 @@ export interface HookEvent {
   channel: Channel;
   ok: boolean;
   result: string;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  instagram: string;
+  clients: string;
+  channel: string;
+  at: string;
 }
