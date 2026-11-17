@@ -1,3 +1,4 @@
+import LiveRefresh from "@/components/LiveRefresh";
 import { notFound } from "next/navigation";
 import { readDB } from "@/lib/store";
 import { timeLabel } from "@/lib/util";
@@ -27,6 +28,8 @@ export default async function ReplyPage({ params, searchParams }: { params: Prom
   if (contact.nextSession) facts.push({ label: "Next session", value: contact.nextSession.when, tint: "var(--peri-tint)", ink: "var(--peri-ink)" });
 
   return (
+    <>
+    <LiveRefresh />
     <ReplyClient
       messageId={msg.id}
       mode={mode === "nudge" ? "nudge" : "reply"}
@@ -36,5 +39,6 @@ export default async function ReplyPage({ params, searchParams }: { params: Prom
       facts={facts.slice(0, 3)}
       defaultAngle={db.settings.style.defaultAngle}
     />
+    </>
   );
 }
