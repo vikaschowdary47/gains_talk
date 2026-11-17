@@ -7,20 +7,46 @@ import { CHANNELS } from "@/lib/channels";
 import { Icon, Rings } from "@/components/Icon";
 import { Avatar, ChannelChip, ChannelIcon, Sidebar } from "@/components/ui";
 import RemoveClient from "./RemoveClient";
+import CatchUp from "./CatchUp";
+import { clientGlance } from "@/lib/glance";
+import { igIdsOf } from "@/lib/ig-history";
+import { currentBrief } from "@/lib/brief";
 import { statSummary } from "@/lib/stats";
 import type { Stat } from "@/lib/types";
 
-/** A tiny trend line for a stat. */
-function Spark({ points }: { points: Stat[] }) {
+const num = (n: number) => (Math.abs(n) >= 1000 ? Math.round(n).toLocaleString("en-US") : String(Math.round(n * 10) / 10));
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+/** A clean line chart for one stat: start and end values, first and last dates. */
+function StatChart({ points, unit, label }: { points: Stat[]; unit: string; label: string }) {
   if (points.length < 2) return null;
+  const W = 320, H = 110, L = 8, R = 8, T = 14, B = 14;
   const vals = points.map((p) => p.value);
+  const times = points.map((p) => Date.parse(p.at));
   const min = Math.min(...vals), max = Math.max(...vals);
-  const span = max - min || 1;
-  const d = vals.map((v, i) => `${(i / (vals.length - 1)) * 100},${28 - ((v - min) / span) * 24}`).join(" ");
+  // Keep a sensible scale so tiny changes look small (e.g. 0.4 lb on a weight chart).
+  const floor = Math.abs(max) * (unit === "lb" || unit === "kg" ? 0.02 : 0.15);
+  const span = Math.max(max - min, floor, 1);
+  const mid = (max + min) / 2;
+  const lo = mid - span / 2;
+  const t0 = times[0], tspan = times[times.length - 1] - t0 || 1;
+  const xy = points.map((p, i) => [L + ((times[i] - t0) / tspan) * (W - L - R), T + (1 - (p.value - lo) / span) * (H - T - B)]);
+  const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const last = xy[xy.length - 1];
   return (
-    <svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ width: "100%", height: 34 }} aria-hidden="true">
-      <polyline points={d} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-    </svg>
+    <figure style={{ margin: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }} role="img" aria-label={`${label} from ${points[0].value} ${unit} on ${shortDate(points[0].at)} to ${points[points.length - 1].value} ${unit} on ${shortDate(points[points.length - 1].at)}`}>
+        <line x1={L} x2={W - R} y1={T} y2={T} stroke="#E7E8F1" strokeWidth="1" />
+        <line x1={L} x2={W - R} y1={H - B} y2={H - B} stroke="#E7E8F1" strokeWidth="1" />
+        <path d={d} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        {xy.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i === xy.length - 1 ? 4.5 : 3} fill={i === xy.length - 1 ? "var(--primary)" : "#fff"} stroke="var(--primary)" strokeWidth="2" />)}
+        <circle cx={last[0]} cy={last[1]} r="9" fill="var(--primary)" opacity="0.12" />
+      </svg>
+      <figcaption className="row small muted" style={{ justifyContent: "space-between" }}>
+        <span>{shortDate(points[0].at)}: {num(points[0].value)} {unit}</span>
+        <span>{shortDate(points[points.length - 1].at)}: {num(points[points.length - 1].value)} {unit}</span>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -39,6 +65,13 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const channels = [...new Set([...c.handles.map((h) => h.channel), ...msgs.map((m) => m.channel)])];
   const recentIn = msgs.filter((m) => m.direction === "in").slice(0, 3);
   const stats = statSummary(c.stats);
+  const g = clientGlance(db, c);
+  const first = c.name.split(" ")[0];
+  const hasInstagram = igIdsOf(c.handles).length > 0;
+  const brief = currentBrief(db, c);
+  const badge = { "check-in": ["Needs a check-in", "#FFF3D6", "#5A3E00"], "on-track": ["On track", "#DDF4E8", "#15603C"], steady: ["Steady", "#E7E8F1", "#2E3352"], new: ["Getting started", "#E7E8F1", "#2E3352"] }[brief.status];
+  const tone = { warn: "#A8410F", good: "#15603C", info: "var(--muted)" } as const;
+  const nudgeHref = lastIn ? `/reply/${lastIn.id}?mode=nudge` : null;
   const messageHref = waiting ? `/reply/${waiting.id}` : lastIn ? `/reply/${lastIn.id}?mode=nudge` : null;
 
   return (
@@ -69,6 +102,85 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <div className="profile-grid">
       <div className="col">
+      <section className="pad stack-sm" aria-labelledby="brief">
+        <div className="card" style={{ gap: 14, borderRadius: 20 }}>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h2 id="brief" className="h2" style={{ fontSize: 20, margin: 0 }}>{first}&apos;s brief</h2>
+            <span style={{ fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: badge[1], color: badge[2] }}>{badge[0]}</span>
+          </div>
+          <p style={{ margin: 0, fontSize: 16, lineHeight: "24px" }}>{brief.text}</p>
+          {brief.signals.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              {brief.signals.slice(0, 6).map((sg) => (
+                <div key={sg.key} style={{ background: "var(--bg, #F4F4F8)", borderRadius: 14, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                  <span className="small muted">{sg.label}</span>
+                  <span style={{ fontSize: 19, fontWeight: 800 }}>{sg.value}</span>
+                  <span className="small" style={{ fontWeight: 600, color: tone[sg.level] }}>{sg.detail}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {brief.quotes.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>What {first} said</span>
+              {brief.quotes.map((q) => (
+                <p key={q.at} className="small" style={{ margin: 0, lineHeight: "20px", color: "var(--muted)" }}>&ldquo;{q.text}&rdquo; ({timeLabel(q.at)})</p>
+              ))}
+            </div>
+          )}
+          {nudgeHref && brief.status === "check-in" && !waiting && (
+            <Link href={nudgeHref} className="btn btn-primary btn-pill" style={{ alignSelf: "flex-start" }}>Draft a check-in</Link>
+          )}
+          <span className="small muted">
+            Based on {brief.basis.messages} {brief.basis.messages === 1 ? "message" : "messages"} and {brief.basis.numbers} {brief.basis.numbers === 1 ? "number" : "numbers"} {first} shared. GainsTalk only knows what {first} told you.
+          </span>
+        </div>
+      </section>
+
+      <section className="pad stack-sm" aria-labelledby="glance">
+        <h2 id="glance" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>At a glance</h2>
+        <div className="card" style={{ gap: 0, borderRadius: 20, padding: "6px 16px" }}>
+          <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", columnGap: 0 }}>
+            {[
+              ["Waiting on your reply", g.waiting ? `Yes, for ${g.waiting}` : "No"],
+              ["Their last message", g.lastIn ? `${g.lastIn.ago} ago` : "None yet"],
+              ["Messages this week", `${g.theirWeek} from ${first}, ${g.yourWeek} from you`],
+              ["You usually reply in", g.replyTime ?? "Not enough messages yet"],
+            ].map(([k, v], i) => (
+              <div key={k} style={{ display: "contents" }}>
+                <dt style={{ padding: "12px 0", fontSize: 15, color: "var(--muted)", borderTop: i ? "1px solid #EEEFF5" : "none" }}>{k}</dt>
+                <dd style={{ margin: 0, padding: "12px 0 12px 12px", fontSize: 15, fontWeight: 700, textAlign: "right", borderTop: i ? "1px solid #EEEFF5" : "none", color: k === "Waiting on your reply" && g.waiting ? "#A8410F" : "var(--ink)" }}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        {g.lastIn && g.lastIn.quietDays >= 7 && !g.waiting && (
+          <p className="notice amber" style={{ margin: 0 }}>{first} hasn&apos;t messaged in {g.lastIn.quietDays} days. A quick check-in could help.</p>
+        )}
+      </section>
+
+      <section className="pad stack-sm" aria-labelledby="about">
+        <h2 id="about" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>About {first}</h2>
+        <div className="card" style={{ gap: 12, borderRadius: 20 }}>
+          {c.about?.summary || c.about?.facts.length ? (
+            <>
+              {c.about.summary && <p style={{ margin: 0, fontSize: 16, lineHeight: "24px" }}>{c.about.summary}</p>}
+              {c.about.facts.length > 0 && (
+                <ul style={{ margin: 0, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 6, fontSize: 15, lineHeight: "21px" }}>
+                  {c.about.facts.map((f) => <li key={f}>{f}</li>)}
+                </ul>
+              )}
+              <span className="small muted">Written by GainsTalk from your chats, {timeLabel(c.about.updatedAt).toLowerCase()}. Check anything important with {first}.</span>
+            </>
+          ) : (
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "22px", color: "var(--muted)" }}>
+              Nothing here yet. GainsTalk can read {first}&apos;s messages and note their goals, injuries, schedule and preferences.
+            </p>
+          )}
+          <CatchUp id={c.id} hasInstagram={hasInstagram} />
+        </div>
+      </section>
+
       {c.nextSession && (
         <section aria-label="Next session" className="card session-card" style={{ margin: "-76px 16px 0", position: "relative", background: "var(--mint)", boxShadow: "0 14px 30px rgba(22,24,58,0.18)" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -99,22 +211,26 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <section className="pad stack-sm" aria-labelledby="stats">
         <h2 id="stats" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>Stats</h2>
         {stats.length === 0 ? (
-          <p className="small muted" style={{ margin: "0 4px" }}>When {c.name.split(" ")[0]} mentions a number like their weight, steps or a lift, it&apos;s logged here automatically.</p>
+          <p className="small muted" style={{ margin: "0 4px" }}>When {first} mentions a number like their weight, steps or a lift, it&apos;s logged here with a chart.</p>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
             {stats.map((st) => (
-              <div key={st.kind} className="card" style={{ gap: 4, borderRadius: 20, padding: 14 }}>
-                <span className="small muted" style={{ fontWeight: 600 }}>{st.label}</span>
-                <span className="display" style={{ fontSize: 24, fontWeight: 800 }}>
-                  {st.latest.value}<span style={{ fontSize: 14, fontWeight: 600, marginLeft: 3 }}>{st.latest.unit}</span>
+              <div key={st.kind} className="card" style={{ gap: 8, borderRadius: 20, padding: 16 }}>
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>{st.label}</span>
+                  <span className="small muted">{timeLabel(st.latest.at)}</span>
+                </div>
+                <span className="display" style={{ fontSize: 30, fontWeight: 800, lineHeight: "34px" }}>
+                  {num(st.latest.value)}<span style={{ fontSize: 15, fontWeight: 600, marginLeft: 4 }}>{st.latest.unit}</span>
                 </span>
-                {st.change !== null && st.change !== 0 && (
-                  <span className="small" style={{ fontWeight: 600 }}>
-                    {st.change > 0 ? "Up" : "Down"} {Math.abs(st.change)} {st.latest.unit} since {new Date(st.points[0].at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                {st.change !== null && st.change !== 0 ? (
+                  <span style={{ fontSize: 15, fontWeight: 600 }}>
+                    {st.change > 0 ? "Up" : "Down"} {num(Math.abs(st.change))} {st.latest.unit} since {shortDate(st.points[0].at)}
                   </span>
+                ) : (
+                  <span className="small muted">{st.points.length > 1 ? "No change yet" : "Logged once so far"}</span>
                 )}
-                <Spark points={st.points} />
-                <span className="small muted">Last logged {timeLabel(st.latest.at)}{st.points.length > 1 ? `, ${st.points.length} entries` : ""}</span>
+                <StatChart points={st.points} unit={st.latest.unit} label={st.label} />
               </div>
             ))}
           </div>
@@ -162,7 +278,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <div className="col">
       <section className="pad stack-sm" aria-labelledby="activity">
-        <h2 id="activity" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>Every channel, one timeline</h2>
+        <h2 id="activity" className="h2" style={{ fontSize: 22, margin: "0 4px" }}>Recent messages</h2>
         <ul className="list">
           {msgs.slice(0, 12).map((m) => (
             <li key={m.id} className="list-item" style={{ alignItems: "flex-start" }}>

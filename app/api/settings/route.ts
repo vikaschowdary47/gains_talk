@@ -3,6 +3,7 @@ import { logPendingStats } from "@/lib/stats";
 import { addHandle } from "@/lib/ingest";
 import { readDB, updateDB } from "@/lib/store";
 import { fetchIgHistory, igIdsOf, mergeIgHistory } from "@/lib/ig-history";
+import { recordHook } from "@/lib/hooklog";
 import { isChannel } from "@/lib/channels";
 import { avatarFor, initialsOf, uid } from "@/lib/util";
 import type { Angle, Channel, StyleSettings } from "@/lib/types";
@@ -129,8 +130,9 @@ export async function POST(req: Request) {
       const c = db.contacts.find((x) => x.id === cid);
       if (!c) continue;
       for (const igsid of igIdsOf(c.handles)) {
-        const past = await fetchIgHistory(db, igsid);
+        const { messages: past, error } = await fetchIgHistory(db, igsid);
         if (past.length) imported += await updateDB((fresh) => mergeIgHistory(fresh, cid, past));
+        else if (error) await recordHook("instagram", false, `Couldn't bring in ${c.name}'s past messages. ${error}`);
       }
     }
   }

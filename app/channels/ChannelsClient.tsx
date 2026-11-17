@@ -123,6 +123,9 @@ export default function ChannelsClient(p: { rows: ChannelRow[]; clientCount: num
                   {r.disconnect && (
                     <button type="button" className="btn btn-pill sm" onClick={() => disconnect(r.disconnect!)}>Disconnect</button>
                   )}
+                  {(r.channel === "instagram" || r.channel === "whatsapp") && r.state === "on" && (
+                    <Link href={`/import/${r.channel}`} className="btn btn-pill sm btn-primary">Add clients from {r.channel === "instagram" ? "Instagram" : "WhatsApp"}</Link>
+                  )}
                   {(r.channel === "whatsapp" || r.channel === "instagram") && r.state !== "setup" && (
                     <button type="button" className="btn btn-pill sm" onClick={() => checkWhatsApp(false, r.channel)} disabled={checking}>
                       {checking ? "Checking…" : "Check connection"}

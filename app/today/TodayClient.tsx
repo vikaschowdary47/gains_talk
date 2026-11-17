@@ -24,6 +24,11 @@ interface PendingPerson { id: string; name: string; channel: Channel; handle: st
 
 type Tab = "replies" | "quiet" | "promises";
 
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
+}
+
 export default function TodayClient(props: {
   coachName: string;
   today: string;
@@ -34,6 +39,7 @@ export default function TodayClient(props: {
   pending: PendingPerson[];
   clients: { id: string; name: string }[];
   defaultAngle: Angle;
+  aiNotice?: string;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("replies");
@@ -234,6 +240,12 @@ export default function TodayClient(props: {
   return (
     <main className="app has-nav">
       <Toast msg={toast} />
+      {props.aiNotice && (
+        <div role="status" className="ai-notice" style={{ margin: "12px 16px 0", padding: "12px 14px", borderRadius: 16, background: "#FFF3D6", color: "#5A3E00", fontSize: 14, lineHeight: "20px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <strong style={{ flex: "none" }}>Drafts:</strong>
+          <span>{props.aiNotice}</span>
+        </div>
+      )}
       <section className="hero">
         <Rings />
         <div className="row" style={{ justifyContent: "space-between" }}>
@@ -248,7 +260,7 @@ export default function TodayClient(props: {
           </span>
         </div>
         <h1 className="display" style={{ fontSize: 31, lineHeight: "35px", fontWeight: 700 }}>
-          Morning, {props.coachName}. Here&apos;s your game plan.
+          <span suppressHydrationWarning>{greeting()}</span>, {props.coachName}. Here&apos;s your game plan.
         </h1>
         <div className="tiles" role="group" aria-label="Today's tasks">
           {tiles.map((t) => (

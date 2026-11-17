@@ -68,6 +68,7 @@ export default async function TodayPage() {
       pending={pending}
       clients={db.contacts.filter((c) => c.isClient).map((c) => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name))}
       defaultAngle={db.settings.style.defaultAngle}
+      aiNotice={!process.env.ANTHROPIC_API_KEY ? "No Claude key is set, so drafts use simple templates. Add ANTHROPIC_API_KEY in Vercel and redeploy." : db.settings.aiStatus && !db.settings.aiStatus.ok ? db.settings.aiStatus.detail : undefined}
     />
     </>
   );

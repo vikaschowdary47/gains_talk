@@ -23,7 +23,8 @@ export async function GET(req: Request) {
       db.settings.instagram = conn;
       logHook(db, "instagram", true, `Connected${conn.username ? ` as @${conn.username}` : ""}. DMs to this account now come here.`);
     });
-    return back({ ig: "connected" });
+    // First thing after connecting: pick which Instagram chats are clients.
+    return Response.redirect(new URL("/import/instagram?first=1", req.url), 302);
   } catch (e) {
     return back({ ig: "error", reason: e instanceof Error ? e.message : String(e) });
   }

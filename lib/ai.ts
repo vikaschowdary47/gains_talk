@@ -5,8 +5,11 @@ import { enforceStyle, styleRulesText } from "./style";
 import { CHANNELS } from "./channels";
 import { uid } from "./util";
 import { statsForPrompt } from "./stats";
+import { explainAiError, recordAiStatus } from "./ai-status";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
+
+export { ask as askClaude, parseJSON };
 
 export function aiEnabled(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -17,12 +20,19 @@ function client(): Anthropic {
 }
 
 async function ask(system: string, content: Anthropic.MessageParam["content"], maxTokens = 900): Promise<string> {
-  const res = await client().messages.create({
-    model: MODEL,
-    max_tokens: maxTokens,
-    system,
-    messages: [{ role: "user", content }],
-  });
+  let res: Anthropic.Message;
+  try {
+    res = await client().messages.create({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: "user", content }],
+    });
+  } catch (err) {
+    await recordAiStatus(false, explainAiError(err));
+    throw err;
+  }
+  await recordAiStatus(true);
   return res.content
     .map((b) => (b.type === "text" ? b.text : ""))
     .join("")

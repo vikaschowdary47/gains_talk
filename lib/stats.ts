@@ -4,18 +4,27 @@ import type { DB, Stat } from "./types";
 import { readDB, updateDB } from "./store";
 import { aiEnabled } from "./ai";
 import { uid } from "./util";
+import { explainAiError, recordAiStatus } from "./ai-status";
 
 const MODEL = process.env.ANTHROPIC_STATS_MODEL || "claude-haiku-5-5";
 const HAS_NUMBER = /\d/;
 
 type Found = Omit<Stat, "id" | "at" | "sourceMessageId">;
 
-/** Without AI: catch the common case, a body weight like "182.4 lbs" or "79kg". */
+/** Without AI: catch the common cases (weight, steps, sleep) with simple patterns. */
 function quickWeight(text: string): Found[] {
-  const m = text.match(/(?:^|[^\d.])(\d{2,3}(?:\.\d)?)\s?(lbs?|pounds|kgs?|kilos)\b/i);
-  if (!m) return [];
-  const kg = /^k/i.test(m[2]);
-  return [{ kind: "weight", label: "Weight", value: Number(m[1]), unit: kg ? "kg" : "lb" }];
+  const out: Found[] = [];
+  const w = text.match(/(?:^|[^\d.])(\d{2,3}(?:\.\d)?)\s?(lbs?|pounds|kgs?|kilos)\b/i);
+  if (w && !/goal|target|want to|get to|aim/i.test(text)) out.push({ kind: "weight", label: "Weight", value: Number(w[1]), unit: /^k/i.test(w[2]) ? "kg" : "lb" });
+  const st = text.match(/(\d{1,2}(?:[.,]\d{3}|\d{3})|\d{1,2}(?:\.\d)?k)\s*steps/i);
+  if (st) {
+    const raw = st[1].toLowerCase();
+    const value = raw.endsWith("k") ? Math.round(parseFloat(raw) * 1000) : Number(raw.replace(/[.,]/g, ""));
+    if (value >= 100 && value <= 80000) out.push({ kind: "steps", label: "Steps", value, unit: "steps" });
+  }
+  const sl = text.match(/slept\s*(?:for\s*)?(\d{1,2}(?:\.\d)?)\s*(?:h|hrs?|hours)\b/i) ?? text.match(/(\d{1,2}(?:\.\d)?)\s*(?:h|hrs?|hours)\s*(?:of\s*)?sleep/i);
+  if (sl && Number(sl[1]) <= 14) out.push({ kind: "sleep", label: "Sleep", value: Number(sl[1]), unit: "h" });
+  return out;
 }
 
 async function aiStats(text: string, name: string): Promise<Found[]> {
@@ -54,6 +63,7 @@ export async function logPendingStats(limit = 25): Promise<number> {
       found.set(m.id, aiEnabled() ? await aiStats(m.text, clients.get(m.clientId)!.name.split(" ")[0]) : quickWeight(m.text));
     } catch (e) {
       console.error("[stats]", e);
+      await recordAiStatus(false, explainAiError(e));
       found.set(m.id, quickWeight(m.text));
     }
   }
@@ -76,6 +86,9 @@ export async function logPendingStats(limit = 25): Promise<number> {
       c.stats.sort((a, b) => a.at.localeCompare(b.at));
     }
   });
+  // Re-word the coach brief for clients whose data changed (skipped when nothing changed).
+  const { refreshBrief } = await import("./brief");
+  for (const id of new Set(todo.map((m) => m.clientId))) await refreshBrief(id);
   return added;
 }
 

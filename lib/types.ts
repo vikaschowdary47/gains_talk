@@ -39,7 +39,32 @@ export interface Contact {
   nextSession?: { when: string; topic: string };
   /** Numbers the client reported in their messages (weight, steps, lifts...), oldest first. */
   stats?: Stat[];
+  /** What GainsTalk learned from their messages, in plain English. */
+  about?: { summary: string; facts: string[]; updatedAt: string };
+  /** The coach brief: computed signals plus short wording, saved until the data changes. */
+  brief?: Brief;
 }
+
+export interface Signal {
+  key: string;
+  level: "warn" | "good" | "info";
+  label: string;
+  value: string;
+  detail: string;
+}
+
+export interface Brief {
+  status: "check-in" | "on-track" | "steady" | "new";
+  text: string;
+  signals: Signal[];
+  quotes: { text: string; at: string }[];
+  basis: { messages: number; numbers: number };
+  fingerprint: string;
+  updatedAt: string;
+  /** "ai" when Claude wrote the sentences, "rules" for the free template. */
+  by: "ai" | "rules";
+}
+
 
 export interface Stat {
   id: string;
@@ -144,6 +169,8 @@ export interface Settings {
   timeZone?: string;
   /** The demo clients and messages old databases started with have been removed. */
   samplesCleared?: boolean;
+  /** Whether the last Claude call worked, in plain English. */
+  aiStatus?: { ok: boolean; at: string; detail: string };
   /** Which Meta server and account id answered for the pasted Instagram token (found by Check connection). */
   igRoute?: { base: string; account: string };
   /** The coach's connected Instagram professional account (Instagram Login). */

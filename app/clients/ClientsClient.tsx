@@ -49,6 +49,11 @@ export default function ClientsClient({ rows, hidden }: { rows: ClientRow[]; hid
           </Link>
         </header>
 
+        <div className="row" style={{ gap: 8, flexWrap: "wrap", padding: "0 4px" }}>
+          <Link href="/import/instagram" className="btn btn-pill sm btn-white">Add clients from Instagram</Link>
+          <Link href="/import/whatsapp" className="btn btn-pill sm btn-white">Add clients from WhatsApp</Link>
+        </div>
+
         <label className="search">
           <Icon name="search" size={18} stroke={2.2} />
           <span className="sr-only">Search clients</span>
