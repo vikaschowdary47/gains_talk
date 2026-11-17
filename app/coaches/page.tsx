@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LogoMark } from "@/components/Logo";
 
 export const metadata: Metadata = {
   title: "GainsTalk for coaches: never lose a client to a missed message",
@@ -58,7 +59,7 @@ export default async function Coaches({ searchParams }: { searchParams: Promise<
         <div className="lp-wrap">
           <nav className="lp-nav" aria-label="Main">
             <Link href="/coaches" className="lp-logo">
-              <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="2" y="6" width="14" height="16" rx="5" fill="#7be0b8" /><rect x="18" y="12" width="14" height="16" rx="5" fill="#6c78f2" /><rect x="9" y="16" width="16" height="3" rx="1.5" fill="#fff" /></svg>
+              <LogoMark size={38} variant="dark" />
               GainsTalk
             </Link>
             <a href="#early-access" className="lp-btn lp-white">Get early access</a>
